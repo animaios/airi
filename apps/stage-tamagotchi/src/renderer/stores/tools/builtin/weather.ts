@@ -7,7 +7,6 @@ import { fetchWeather } from './weather-api'
 import { executeWidgetAction } from './widgets'
 
 export type { WeatherData } from './weather-api'
-export { fetchWeather, geocodeCity, mapWmoCode } from './weather-api'
 
 // -- LLM Tool --
 

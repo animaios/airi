@@ -55,7 +55,7 @@ async function realPathOf(entry: Dirent<string>, options?: { cwd?: string }): Pr
  * Returns:
  * - Array of validated manifest entries with resolved paths and version metadata
  */
-export async function loadManifestsFrom(
+async function loadManifestsFrom(
   dir: string,
   log: ReturnType<typeof useLogg>,
 ): Promise<ManifestEntry[]> {
