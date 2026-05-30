@@ -116,7 +116,7 @@ describe('streamingSynthesize', () => {
     expect(server.observedTokens).toEqual(['test-jwt'])
   })
 
-  it('rejects when the ws closes before session.finished (codex HIGH #2)', async () => {
+  it('rejects when the ws closes before session.finished (ai HIGH #2)', async () => {
     // Server sends some audio chunks then closes the ws WITHOUT emitting
     // session.finished. Pre-fix behavior: streamingSynthesize would
     // resolve with the partial audio, and Stage.vue would play a

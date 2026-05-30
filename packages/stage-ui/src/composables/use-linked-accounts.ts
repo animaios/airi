@@ -92,7 +92,7 @@ export function useLinkedAccounts(args: UseLinkedAccountsArgs) {
    * fetch errors so a momentary 5xx doesn't flip `hasCredentialAccount`
    * to false and mis-route credentialed users into the email-set-password
    * branch. Resets only on sign-out.
-   * Source: PR #1753 review (chatgpt-codex-connector P2).
+   * Source: PR #1753 review (chatgpt-ai-connector P2).
    */
   const loaded = shallowRef(false)
   const error = shallowRef<string | null>(null)
@@ -146,7 +146,7 @@ export function useLinkedAccounts(args: UseLinkedAccountsArgs) {
     catch (err) {
       // Keep prior `linkedAccounts` on error so a transient 5xx doesn't
       // flip `hasCredentialAccount` and mis-route the password UI.
-      // Source: PR #1753 review (chatgpt-codex-connector P2).
+      // Source: PR #1753 review (chatgpt-ai-connector P2).
       error.value = args.describeError(err) || args.messages.listFailed
     }
     finally {

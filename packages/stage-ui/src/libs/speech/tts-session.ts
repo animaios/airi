@@ -204,7 +204,7 @@ export function createStreamingTtsSession<TAudio = AudioBuffer>(
     appendText: handle.appendText,
     // Streaming has no in-band queue to align audio with; fire the host's
     // immediate-special callback so emotion / delay tokens still reach the
-    // queues. The perceptual mis-alignment vs audio is minor — codex
+    // queues. The perceptual mis-alignment vs audio is minor — ai
     // review and the segmenter parity comment in Stage.vue prior to the
     // refactor both accept it.
     appendSpecial: snapshot.onImmediateSpecial,
@@ -277,7 +277,7 @@ export interface StageTtsSessionContext<TAudio = AudioBuffer> {
  * - Caller has already cancelled / cleared any previous session ref.
  * - When `transport === 'bidirectional-ws'`, the snapshot's `voice` is
  *   a real voice id and `audioContext` is set; otherwise the factory
- *   silently falls back to the segmenter path (codex review MEDIUM #3
+ *   silently falls back to the segmenter path (ai review MEDIUM #3
  *   noted this fallback should not silently re-enter the legacy
  *   per-segment path inside `tts()` — the segmenter adapter routes
  *   through the normal segmenter+tts callback, which is the intended

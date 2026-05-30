@@ -324,7 +324,7 @@ const speechPipeline = createSpeechPipeline<AudioBuffer>({
     // voice catalog hadn't finished loading when the user sent the
     // message). The old fallback would silently re-open a fresh ws per
     // segment — exactly the behavior the refactor is meant to delete.
-    // Codex review MEDIUM #3: refuse loudly instead.
+    // AI review MEDIUM #3: refuse loudly instead.
     if (resolveSpeechTransport(activeSpeechProvider.value) === 'bidirectional-ws') {
       console.warn('[Speech Pipeline] bidirectional-ws provider reached per-segment fallback', {
         reason: 'streaming session was not opened at intent start (voice unset?)',
@@ -415,7 +415,7 @@ const speechPipeline = createSpeechPipeline<AudioBuffer>({
       // (returning null) so the conversation keeps going, but operators see
       // the failure in devtools instead of silent truncation. Streaming
       // failures (truncated session, network drop, billing rejection) now
-      // produce visible diagnostic lines — see codex review item #6.
+      // produce visible diagnostic lines — see ai review item #6.
       if (!signal.aborted) {
         console.error('[Speech Pipeline] tts() failed', {
           provider: activeSpeechProvider.value,
@@ -841,7 +841,7 @@ onUnmounted(() => {
   // Tear down any in-flight TTS session (segmenter or streaming) and
   // drain playback. Without this, a still-open streaming ws keeps
   // feeding sentences into a playbackManager whose listeners still
-  // mutate component refs (caption / nowSpeaking). Codex review: HIGH
+  // mutate component refs (caption / nowSpeaking). AI review: HIGH
   // #1 + MEDIUM #5.
   currentSession?.cancel('unmount')
   currentSession = null

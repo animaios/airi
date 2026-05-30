@@ -152,7 +152,7 @@ export function createStreamingTtsPipeline(options: StreamingTtsPipelineOptions)
    * pairs, but a buggy upstream or re-ordered transport could send two
    * `sentence.start`s in a row; using a queue (instead of a single
    * `pendingSentenceText` variable) keeps each audio buffer labelled with
-   * the right text instead of overwriting. Codex review MEDIUM #4.
+   * the right text instead of overwriting. AI review MEDIUM #4.
    */
   const pendingSentenceTexts: string[] = []
   const bufferEntireSession = options.bufferEntireSession ?? false
@@ -267,7 +267,7 @@ export function createStreamingTtsPipeline(options: StreamingTtsPipelineOptions)
       case 'sentence.start': {
         // Append to the queue. `sentence.end` consumes from the head, so
         // back-to-back `sentence.start`s (which shouldn't happen but
-        // codex MEDIUM #4 noted the race) don't clobber each other.
+        // ai MEDIUM #4 noted the race) don't clobber each other.
         const text = readSentenceText(evt.payload)
         if (text != null)
           pendingSentenceTexts.push(text)
@@ -373,7 +373,7 @@ export function createStreamingTtsPipeline(options: StreamingTtsPipelineOptions)
       // forwarded verbatim. Dropping them would corrupt the text the
       // upstream model sees ("hello" + " " + "world" → "helloworld").
       // The per-character billing cost is negligible compared to the
-      // semantic risk; codex review LOW #7 noted the wasted units but
+      // semantic risk; ai review LOW #7 noted the wasted units but
       // accepted the trade-off.
       safeSend(JSON.stringify({ event: 'text', text }))
     },
@@ -390,7 +390,7 @@ export function createStreamingTtsPipeline(options: StreamingTtsPipelineOptions)
       // `stopByIntent` on the playback manager and drops whatever did
       // schedule, so this does NOT prolong playback — it just keeps the
       // termination semantics consistent across cancel / session.finished
-      // / error / close paths (codex review).
+      // / error / close paths (ai review).
       void requestTerminate(null)
     },
   }

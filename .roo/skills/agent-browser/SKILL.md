@@ -34,7 +34,7 @@ agent-browser skills get <name> --full    # Include references and templates
 ## Why agent-browser
 
 - Fast native Rust CLI, not a Node.js wrapper
-- Works with any AI agent (Cursor, Claude Code, Codex, Continue, Windsurf, etc.)
+- Works with any AI agent
 - Chrome/Chromium via CDP with no Playwright or Puppeteer dependency
 - Accessibility-tree snapshots with element refs for reliable interaction
 - Sessions, authentication vault, state persistence, video recording

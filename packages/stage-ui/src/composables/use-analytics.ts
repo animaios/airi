@@ -244,7 +244,7 @@ export function useAnalytics() {
   // ─── TTS events (forwarded from speech bus by use-speech-pipeline-analytics) ─
   // voice_id is `voice_type: 'catalog' | 'custom'` to keep cardinality
   // bounded — MiMo voice clone allows arbitrary user-supplied voice ids
-  // (see codex F6). Actual voice_id is in properties for debug, NOT for
+  // (see ai F6). Actual voice_id is in properties for debug, NOT for
   // PostHog group-by.
 
   function trackTtsIntentStarted(properties: { intent_id: string, turn_id?: string }) {
