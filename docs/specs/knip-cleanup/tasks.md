@@ -2,14 +2,38 @@
 
 ## Phase 1: Fix Knip Configuration (High Leverage)
 
-- [ ] **T1: Fix `packages/stage-ui` entry in `knip.json`**
-  - Remove `"src/index.ts!"` from the `packages/stage-ui` workspace entry in `knip.json` (the file does not exist).
-  - Also remove `"src/**/*.story.vue"` and `"stories/setup.ts"` since these are dev-only artifacts; Knip should trace from `package.json` `exports`.
-  - Result: `"packages/stage-ui": {}`
+- [x] **T1: Fix `packages/stage-ui` entry in `knip.json`**
+  - Remove non-existent `"src/index.ts!"` entry (already done in previous round).
+  - Re-add `"src/**/*.story.vue"` and `"stories/setup.ts"` as `entry` patterns — these are dev-only files that import `uno.css` and other deps, and without explicit entry points Knip falsely flags them as unused.
+  - Result:
+    ```json
+    "packages/stage-ui": {
+      "entry": [
+        "src/**/*.story.vue",
+        "stories/setup.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.vue"
+      ]
+    }
+    ```
 
-- [ ] **T2: Remove redundant entries for `packages/ui-transitions` in `knip.json`**
-  - Remove `"src/index.ts!"` and `"playground/src/main.ts"` from the `packages/ui-transitions` workspace entry.
-  - Result: `"ui-transitions": {}` or remove the key entirely.
+- [x] **T2: Fix `packages/ui-transitions` entry in `knip.json`**
+  - Re-add `"playground/src/main.ts"` as an `entry` pattern — the playground imports dependencies that Knip needs to trace, and without it the playground files are falsely flagged as unused.
+  - Result:
+    ```json
+    "packages/ui-transitions": {
+      "entry": [
+        "playground/src/main.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.vue",
+        "playground/src/**/*.ts"
+      ]
+    }
+    ```
 
 - [ ] **T3: Investigate and fix `packages/stage-layouts` package entry hint**
   - Run `pnpm knip` after T1 and T2 to see if the `ViewControls/**/*.vue` hint resolves.

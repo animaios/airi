@@ -21,12 +21,19 @@
       ]
     },
     "packages/stage-ui": {
+      "entry": [
+        "src/**/*.story.vue",
+        "stories/setup.ts"
+      ],
       "project": [
         "src/**/*.ts",
         "src/**/*.vue"
       ]
     },
     "packages/ui-transitions": {
+      "entry": [
+        "playground/src/main.ts"
+      ],
       "project": [
         "src/**/*.ts",
         "src/**/*.vue",

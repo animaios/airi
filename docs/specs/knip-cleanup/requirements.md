@@ -19,15 +19,15 @@ Knip is still unable to fully trace imports across the workspace due to:
 
 ### R1: Fix `packages/stage-ui` Entry Point in Knip Config
 
-- **Current state:** `knip.json` references `src/index.ts!` for `packages/stage-ui`, but no `src/index.ts` file exists in that package.
-- **Expected state:** The entry pattern must point to an existing file. The package's actual barrel export is `src/components/index.ts` (as defined in `package.json` `exports`), but Knip should be configured to trace all meaningful entry points including story files.
-- **Acceptance:** Knip no longer emits the hint `Refine entry pattern (no matches)` for `packages/stage-ui`.
+- **Current state:** `knip.json` previously referenced `src/index.ts!` for `packages/stage-ui`, but no `src/index.ts` file exists. Story files (`src/**/*.story.vue`) and setup files (`stories/setup.ts`) import dependencies (e.g., `uno.css`) that Knip needs to trace, but without explicit entry points they are flagged as unused.
+- **Expected state:** Remove the non-existent `src/index.ts!` entry. Add `src/**/*.story.vue` and `stories/setup.ts` as explicit `entry` patterns so Knip traces their imports correctly.
+- **Acceptance:** Knip no longer emits `Refine entry pattern (no matches)` for `packages/stage-ui`. Story files are not flagged as unused.
 
-### R2: Remove Redundant Entry Patterns in `packages/ui-transitions`
+### R2: Fix `packages/ui-transitions` Entry Point in Knip Config
 
-- **Current state:** `knip.json` explicitly lists `src/index.ts!` and `playground/src/main.ts` as entries for `ui-transitions`.
-- **Expected state:** Remove these entries since Knip auto-detects them. The workspace config should rely on auto-detection.
-- **Acceptance:** Knip no longer emits `Remove redundant entry pattern` hints for `ui-transitions`.
+- **Current state:** `packages/ui-transitions` has playground files (`playground/src/**/*.ts`) in the `project` glob but no explicit entry point for `playground/src/main.ts`, causing Knip to flag playground files as unused.
+- **Expected state:** Add `playground/src/main.ts` as an explicit `entry` pattern so Knip can trace the playground's imports.
+- **Acceptance:** Playground files are not flagged as unused by Knip.
 
 ### R3: Fix Package Entry in `packages/stage-layouts`
 

@@ -76,29 +76,43 @@ This is a configuration and dependency cleanup task — no application architect
 
 ### D1: `packages/stage-ui` Entry Point Fix
 
-**Root cause:** `knip.json` specifies `"src/index.ts!"` for `packages/stage-ui`, but `packages/stage-ui/src/index.ts` does not exist. The package's `exports` in `package.json` maps `"."` to `"./src/components/index.ts"`.
+**Root cause:** `knip.json` previously specified `"src/index.ts!"` for `packages/stage-ui`, but `packages/stage-ui/src/index.ts` does not exist. Additionally, story files (`src/**/*.story.vue`) and setup files (`stories/setup.ts`) import dependencies like `uno.css` that Knip needs to trace. Without explicit entry points, Knip falsely flags these dev-only files as unused.
 
-**Fix:** Remove the `src/index.ts!` entry from the `packages/stage-ui` workspace config in `knip.json`. The `src/**/*.story.vue` and `stories/setup.ts` entries should also be removed since they are not needed as Knip entries — Knip traces imports from the package's `exports` field, and story files are dev-only artifacts.
+**Fix:** Remove the non-existent `src/index.ts!` entry. Add `src/**/*.story.vue` and `stories/setup.ts` as explicit `entry` patterns so Knip can trace their imports. The `project` glob remains broad to cover all source files.
 
 **Resulting config for `packages/stage-ui`:**
 ```json
-"packages/stage-ui": {}
+"packages/stage-ui": {
+  "entry": [
+    "src/**/*.story.vue",
+    "stories/setup.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ]
+}
 ```
 
-This lets Knip rely on auto-detection from `package.json` `exports`.
+### D2: `packages/ui-transitions` Entry Point Fix
 
-### D2: `packages/ui-transitions` Redundant Entries
+**Root cause:** The `playground/src/main.ts` file is the entry point for the ui-transitions playground, which imports dependencies Knip needs to trace. Without it as an explicit entry, Knip flags playground files as unused.
 
-**Root cause:** `knip.json` explicitly lists `src/index.ts!` and `playground/src/main.ts` for `ui-transitions`, but Knip already auto-detects these.
+**Fix:** Add `playground/src/main.ts` as an explicit `entry` pattern. The `project` globs remain to cover all source and playground files.
 
-**Fix:** Remove the entire `ui-transitions` entry from the workspaces config, letting Knip auto-detect.
-
-**Resulting config for `ui-transitions`:**
+**Resulting config for `packages/ui-transitions`:**
 ```json
-"ui-transitions": {}
+"packages/ui-transitions": {
+  "entry": [
+    "playground/src/main.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "playground/src/**/*.ts"
+  ]
+}
 ```
-
-Or remove the key entirely.
 
 ### D3: `packages/stage-layouts` Package Entry
 
