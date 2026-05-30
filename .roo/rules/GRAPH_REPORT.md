@@ -1,1 +1,1 @@
-graphify-out/GRAPH_REPORT.md
+../../graphify-out/GRAPH_REPORT.md
