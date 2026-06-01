@@ -281,28 +281,35 @@ app
       })
     }
 
-    injeca.invoke({
-      dependsOn: {
-        mainWindow,
-        tray,
-        serverChannel,
-        airiHttpServer,
-        godotStageManager,
-        pluginHost,
-        mcpStdioManager,
-        onboardingWindow: onboardingWindowManager,
-        widgetsWindow: widgetsManager,
-        artistryConfig,
-      },
+    ;(injeca.invoke({
+      dependsOn: { setupCardDownloadInterception: setupCardDownloadInterception },
       callback: async (deps) => {
         const { context } = createContext(ipcMain)
-        await setupArtistryBridge({
-          widgetsManager: deps.widgetsWindow,
-          context,
-          artistryConfig: deps.artistryConfig,
-        })
+        setupCardDownloadInterception({ context })
       },
-    })
+    }),
+      injeca.invoke({
+        dependsOn: {
+          mainWindow,
+          tray,
+          serverChannel,
+          airiHttpServer,
+          godotStageManager,
+          pluginHost,
+          mcpStdioManager,
+          onboardingWindow: onboardingWindowManager,
+          widgetsWindow: widgetsManager,
+          artistryConfig,
+        },
+        callback: async (deps) => {
+          const { context } = createContext(ipcMain)
+          await setupArtistryBridge({
+            widgetsManager: deps.widgetsWindow,
+            context,
+            artistryConfig: deps.artistryConfig,
+          })
+        },
+      }))
 
     injeca.start().catch((err) => console.error(err))
 

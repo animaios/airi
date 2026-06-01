@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Select } from '@proj-airi/ui/components/form'
+import { Select, Input, Textarea } from '@proj-airi/ui/components/form'
 import { useI18n } from 'vue-i18n'
 
 defineProps<{
@@ -18,7 +18,20 @@ defineProps<{
   defaultDisplayModelIdPlaceholder: string
   consciousnessProviderActive: boolean
   speechProviderActive: boolean
+  speechPitch: number
+  speechRate: number
+  speechLanguage: string
+  speechSsml: string
+  speechPitchPlaceholder: string
+  speechRatePlaceholder: string
+  speechLanguagePlaceholder: string
+  speechSsmlPlaceholder: string
 }>()
+
+const selectedSpeechPitch = defineModel<number>('selectedSpeechPitch', { required: true })
+const selectedSpeechRate = defineModel<number>('selectedSpeechRate', { required: true })
+const selectedSpeechLanguage = defineModel<string>('selectedSpeechLanguage', { required: true })
+const selectedSpeechSsml = defineModel<string>('selectedSpeechSsml', { required: true })
 const selectedConsciousnessProvider = defineModel<string>('selectedConsciousnessProvider', { required: true })
 const selectedConsciousnessModel = defineModel<string>('selectedConsciousnessModel', { required: true })
 const selectedSpeechProvider = defineModel<string>('selectedSpeechProvider', { required: true })
@@ -128,6 +141,63 @@ const { t } = useI18n()
           :placeholder="defaultDisplayModelIdPlaceholder"
           class="w-full"
         />
+      </div>
+
+      <!-- Speech Configuration -->
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
+        <label
+          :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']"
+        >
+          <div i-lucide:volume-2 />
+          Speech Pitch
+        </label>
+        <Input
+          v-model.number="selectedSpeechPitch"
+          type="number"
+          :min="0.5"
+          :max="2.0"
+          :step="0.1"
+          :placeholder="speechPitchPlaceholder"
+          class="w-full"
+        />
+      </div>
+
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
+        <label
+          :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']"
+        >
+          <div i-lucide:clock />
+          Speech Rate
+        </label>
+        <Input
+          v-model.number="selectedSpeechRate"
+          type="number"
+          :min="0.5"
+          :max="2.0"
+          :step="0.1"
+          :placeholder="speechRatePlaceholder"
+          class="w-full"
+        />
+      </div>
+
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
+        <label
+          :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']"
+        >
+          <div i-lucide:language />
+          Speech Language
+        </label>
+        <Input v-model="selectedSpeechLanguage" type="text" :placeholder="speechLanguagePlaceholder" class="w-full" />
+      </div>
+
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
+        <label
+          :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']"
+        >
+          <div i-lucide:code />
+          SSML
+        </label>
+        <Textarea v-model="selectedSpeechSsml" :placeholder="speechSsmlPlaceholder" rows="4" class="w-full" />
       </div>
 
       <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">

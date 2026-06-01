@@ -25,6 +25,10 @@ const heartbeatsRespectSchedule = defineModel<boolean>('heartbeatsRespectSchedul
 const dreamStateEnabled = defineModel<boolean>('dreamStateEnabled', { required: true })
 const dreamStateStrictAfkGating = defineModel<boolean>('dreamStateStrictAfkGating', { required: true })
 const groundingEnabled = defineModel<boolean>('groundingEnabled', { required: true })
+const shortTermMemoryEnabled = defineModel<boolean>('shortTermMemoryEnabled', { required: true })
+const shortTermMemoryMaxEntries = defineModel<number>('shortTermMemoryMaxEntries', { required: true })
+const shortTermMemoryRetentionMinutes = defineModel<number>('shortTermMemoryRetentionMinutes', { required: true })
+const shortTermMemoryImportanceThreshold = defineModel<number>('shortTermMemoryImportanceThreshold', { required: true })
 </script>
 
 <template>
@@ -239,6 +243,66 @@ const groundingEnabled = defineModel<boolean>('groundingEnabled', { required: tr
           <div class="flex items-center gap-2">
             <input id="ctx-metrics" v-model="heartbeatsContextUsageMetrics" type="checkbox" class="h-3.5 w-3.5" />
             <label for="ctx-metrics" class="text-xs text-neutral-600 dark:text-neutral-400">Usage Metrics</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Short-Term Memory Configuration -->
+      <div class="flex flex-col gap-2 border-l-2 border-neutral-100 pl-4 dark:border-neutral-700">
+        <div class="flex items-center gap-2">
+          <input
+            id="short-term-memory-enabled"
+            v-model="shortTermMemoryEnabled"
+            type="checkbox"
+            class="h-4 w-4 border-gray-300 rounded text-primary-600"
+          />
+          <label for="short-term-memory-enabled" class="text-sm text-neutral-700 font-semibold dark:text-neutral-300">
+            Enable Short-Term Memory
+          </label>
+        </div>
+        <span class="text-xs text-neutral-500">
+          Stores recent conversation context for more coherent multi-turn interactions.
+        </span>
+
+        <div
+          v-if="shortTermMemoryEnabled"
+          class="grid grid-cols-1 ml-6 gap-4 border-l-2 border-neutral-100 pl-4 sm:grid-cols-2 dark:border-neutral-700"
+        >
+          <div class="flex flex-col gap-2">
+            <label class="text-sm text-neutral-700 font-medium dark:text-neutral-300">Max Entries</label>
+            <input
+              v-model.number="shortTermMemoryMaxEntries"
+              type="number"
+              min="1"
+              max="1000"
+              class="border border-neutral-200 rounded-lg bg-transparent px-3 py-2 dark:border-neutral-700"
+            />
+            <span class="text-xs text-neutral-500">Maximum number of entries to retain in short-term memory.</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="text-sm text-neutral-700 font-medium dark:text-neutral-300">Retention (Minutes)</label>
+            <input
+              v-model.number="shortTermMemoryRetentionMinutes"
+              type="number"
+              min="1"
+              max="10080"
+              class="border border-neutral-200 rounded-lg bg-transparent px-3 py-2 dark:border-neutral-700"
+            />
+            <span class="text-xs text-neutral-500">How long entries persist before expiring.</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="text-sm text-neutral-700 font-medium dark:text-neutral-300">Importance Threshold</label>
+            <input
+              v-model.number="shortTermMemoryImportanceThreshold"
+              type="number"
+              min="0"
+              max="1"
+              step="0.1"
+              class="border border-neutral-200 rounded-lg bg-transparent px-3 py-2 dark:border-neutral-700"
+            />
+            <span class="text-xs text-neutral-500">Minimum importance score (0-1) for entries to be retained.</span>
           </div>
         </div>
       </div>

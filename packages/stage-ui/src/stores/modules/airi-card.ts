@@ -46,8 +46,10 @@ export interface DreamStateConfig {
 }
 
 export interface ShortTermMemoryConfig {
-  windowSize: number
-  tokenBudgetPerDay: number
+  enabled: boolean
+  maxEntries: number
+  retentionMinutes: number
+  importanceThreshold: number
 }
 
 export interface ActingConfig {
@@ -60,9 +62,11 @@ export interface ActingConfig {
 export interface AiriOutfit {
   id: string
   name: string
-  icon: string
-  type: 'base' | 'overlay'
+  type: string
   expressions: Record<string, number>
+  backgroundId?: string
+  artistry?: OutfitArtistry
+  manifestation?: OutfitManifestation
 }
 
 export interface CharacterGenerationConfig {
@@ -290,7 +294,7 @@ export function resolveAiriExtension(
 
   const defaultHeartbeats: HeartbeatConfig = {
     enabled: false,
-    intervalMinutes: 5,
+    intervalMinutes: 30,
     prompt: '',
     injectIntoPrompt: true,
     useAsLocalGate: true,
@@ -300,8 +304,8 @@ export function resolveAiriExtension(
       usageMetrics: true,
     },
     schedule: {
-      start: '09:00',
-      end: '22:00',
+      start: '08:00',
+      end: '23:00',
     },
     respectSchedule: true,
   }
@@ -320,8 +324,10 @@ export function resolveAiriExtension(
   }
 
   const defaultShortTermMemory: ShortTermMemoryConfig = {
-    windowSize: 3,
-    tokenBudgetPerDay: 1000,
+    enabled: false,
+    maxEntries: 50,
+    retentionMinutes: 1440,
+    importanceThreshold: 0.5,
   }
 
   const defaultArtistry: AiriExtension['artistry'] = {
@@ -456,9 +462,10 @@ export function resolveAiriExtension(
     })(),
     artistry: {
       ...existingExtension?.artistry,
+
       // FIX 2.4: Migrate legacy artistry from modules.artistry to top-level
-      ...(!existingExtension?.artistry && (existingExtension?.modules as any)?.artistry
-        ? (existingExtension.modules as any).artistry
+      ...(!existingExtension?.artistry && (existingExtension?.modules as LegacyArtistrySettings)?.artistry
+        ? (existingExtension.modules as LegacyArtistrySettings).artistry
         : {}),
       widgetInstruction: existingExtension?.artistry?.widgetInstruction ?? defaultArtistry.widgetInstruction,
       spawnMode: existingExtension?.artistry?.spawnMode ?? 'bg_widget',
@@ -538,9 +545,11 @@ export function resolveAiriExtension(
       dailyRunCount: existingExtension?.dreamState?.dailyRunCount ?? defaultDreamState.dailyRunCount,
     },
     shortTermMemory: {
-      windowSize: existingExtension?.shortTermMemory?.windowSize ?? defaultShortTermMemory.windowSize,
-      tokenBudgetPerDay:
-        existingExtension?.shortTermMemory?.tokenBudgetPerDay ?? defaultShortTermMemory.tokenBudgetPerDay,
+      enabled: existingExtension?.shortTermMemory?.enabled ?? defaultShortTermMemory.enabled,
+      maxEntries: existingExtension?.shortTermMemory?.maxEntries ?? defaultShortTermMemory.maxEntries,
+      retentionMinutes: existingExtension?.shortTermMemory?.retentionMinutes ?? defaultShortTermMemory.retentionMinutes,
+      importanceThreshold:
+        existingExtension?.shortTermMemory?.importanceThreshold ?? defaultShortTermMemory.importanceThreshold,
     },
     proactivity_metrics: {
       ...existingExtension?.proactivity_metrics,
@@ -612,6 +621,16 @@ export const useAiriCardStore = defineStore('airi-card', () => {
    * Uses immutable Map pattern for reactivity safety.
    */
   const addCard = async (card: AiriCard | Card | ccv3.CharacterCardV3) => {
+    // Validate card name
+    if (!card.name || typeof card.name !== 'string' || card.name.trim() === '') {
+      throw new Error('Card name is required')
+    }
+
+    // Validate spec version if it exists
+    if (card.version && typeof card.version !== 'string') {
+      throw new Error('Spec version must be a string')
+    }
+
     const newCardId = nanoid()
 
     // Extract embedded background before it gets stripped
@@ -659,8 +678,10 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     const existingCard = cards.value.get(id)
     if (!existingCard) return false
 
+    // Update the updatedAt timestamp
     const updatedCard = {
       ...existingCard,
+      updatedAt: new Date().toISOString(),
       ...updates,
     }
 
@@ -715,6 +736,30 @@ export const useAiriCardStore = defineStore('airi-card', () => {
 
   const getCard = (id: string) => {
     return cards.value.get(id)
+  }
+
+  /**
+   * Duplicates a card by creating a deep clone with a new ID and appending " (copy)" to the name.
+   * @param id - The ID of the card to duplicate
+   * @returns The ID of the newly created duplicated card
+   */
+  const duplicateCard = async (id: string) => {
+    const sourceCard = getCard(id)
+    if (!sourceCard) return null
+
+    // Create a deep clone of the card
+    const clonedCard = JSON.parse(JSON.stringify(sourceCard))
+    const newCardId = nanoid()
+    const newName = `${clonedCard.name} (copy)`
+
+    // Update the name and add timestamps
+    clonedCard.name = newName
+    clonedCard.createdAt = new Date().toISOString()
+    clonedCard.updatedAt = new Date().toISOString()
+
+    // Add the cloned card to the store
+    const newCardIdResult = await addCard(clonedCard)
+    return newCardIdResult
   }
 
   const getCardDisplayModelId = (id: string) => {
@@ -809,10 +854,19 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       return normalized || fallback
     }
 
+    // Add createdAt and updatedAt timestamps
+    const now = new Date().toISOString()
+    const cardWithTimestamps = {
+      ...card,
+      createdAt: now,
+      updatedAt: now,
+    }
+
     // Branch: Character Card V3 (standard format)
     if ('data' in card) {
       const ccv3Card = card as ccv3.CharacterCardV3
       return {
+        ...cardWithTimestamps,
         name: ccv3Card.data.name || '',
         nickname: (ccv3Card.data as any).nickname || '',
         version: normalizeVersion(ccv3Card.data.character_version),
@@ -860,6 +914,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     // so that sanitized defaults take precedence over raw spread values.
     const cardData = card as any
     return {
+      ...cardWithTimestamps,
       ...cardData,
       name: cardData.name || '',
       nickname: cardData.nickname || '',
@@ -888,7 +943,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
    * Initializes the store with default cards if they don't exist.
    * Compacts all existing cards on startup for normalization.
    */
-  function initialize() {
+  async function initialize() {
     // Compact and normalize all cards on startup
     cards.value = compactAllCardsMap(cards.value)
 
@@ -996,11 +1051,11 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     removeCard,
     updateCard,
     getCard,
+    duplicateCard,
     toggleGrounding,
     setAutonomousArtistry,
     getCardDisplayModelId,
     resetState,
-    initialize,
     seedDefaults,
     isModelSyncPrevented,
     syncCardState,

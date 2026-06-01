@@ -38,6 +38,7 @@ import { useI18n } from 'vue-i18n'
 import FieldAiGeneratorModal from './FieldAiGeneratorModal.vue'
 import CardCreationTabActing from './tabs/CardCreationTabActing.vue'
 import CardCreationTabArtistry from './tabs/CardCreationTabArtistry.vue'
+import CardCreationTabOutfits from './tabs/CardCreationTabOutfits.vue'
 import CardCreationTabBehavior from './tabs/CardCreationTabBehavior.vue'
 import CardCreationTabGeneration from './tabs/CardCreationTabGeneration.vue'
 import CardCreationTabIdentity from './tabs/CardCreationTabIdentity.vue'
@@ -150,6 +151,14 @@ const selectedActingModelExpressionPrompt = ref<string>('')
 const selectedActingSpeechExpressionPrompt = ref<string>('')
 const selectedActingSpeechMannerismPrompt = ref<string>('')
 const selectedActingIdleAnimations = ref<string[]>([])
+const selectedSpeechPitch = ref<number>(1.0)
+const selectedSpeechRate = ref<number>(1.0)
+const selectedSpeechLanguage = ref<string>('')
+const selectedSpeechSsml = ref<string>('')
+const shortTermMemoryEnabled = ref<boolean>(false)
+const shortTermMemoryMaxEntries = ref<number>(100)
+const shortTermMemoryRetentionMinutes = ref<number>(60)
+const shortTermMemoryImportanceThreshold = ref<number>(0.5)
 const actingSpeechCapabilities = ref<SpeechCapabilitiesInfo | null>(null)
 const actingSpeechCapabilitiesLoading = ref<boolean>(false)
 
@@ -568,6 +577,73 @@ interface Tab {
   icon: string
 }
 
+// Outfit type definition
+interface Outfit {
+  id: string
+  name: string
+  type: 'base' | 'overlay'
+  expressions: string[]
+  backgroundId: string
+  expressionCount: number
+}
+
+// Outfits state
+const outfits = ref<Outfit[]>([])
+const selectedOutfitId = ref<string>('')
+
+// Initialize outfits
+const initializeOutfits = () => {
+  if (isEditMode.value && props.cardId) {
+    const existingCard = cardStore.getCard(props.cardId)
+    const airiExt = existingCard?.extensions?.airi as AiriExtension | undefined
+    if (airiExt?.outfits) {
+      outfits.value = airiExt.outfits.map((outfit) => ({ ...outfit, expressionCount: outfit.expressions.length }))
+    } else {
+      outfits.value = []
+    }
+  } else {
+    outfits.value = []
+  }
+}
+
+// Add a new outfit
+const addOutfit = () => {
+  const newOutfit: Outfit = {
+    id: Date.now().toString(),
+    name: 'New Outfit',
+    type: 'base',
+    expressions: [],
+    backgroundId: 'none',
+    expressionCount: 0,
+  }
+  outfits.value.push(newOutfit)
+  selectedOutfitId.value = newOutfit.id
+}
+
+// Delete an outfit
+const deleteOutfit = (id: string) => {
+  outfits.value = outfits.value.filter((outfit) => outfit.id !== id)
+  if (selectedOutfitId.value === id) {
+    selectedOutfitId.value = outfits.value.length > 0 ? outfits.value[0].id : ''
+  }
+}
+
+// Update outfits
+const updateOutfits = (updatedOutfits: Outfit[]) => {
+  outfits.value = updatedOutfits
+}
+
+// Watch for cardId changes to reinitialize outfits
+watch(
+  () => props.cardId,
+  () => {
+    initializeOutfits()
+  },
+)
+
+// Initialize outfits on component mount
+initializeOutfits()
+
 // Active tab ID state
 const activeTabId = ref('')
 
@@ -583,6 +659,11 @@ const tabs: Tab[] = [
   { id: 'acting', label: 'Acting', icon: 'i-solar:mask-happly-bold-duotone' },
   { id: 'modules', label: t('settings.pages.card.modules'), icon: 'i-solar:widget-4-bold-duotone' },
   { id: 'artistry', label: t('settings.pages.modules.artistry.title'), icon: 'i-solar:gallery-bold-duotone' },
+  {
+    id: 'outfits',
+    label: t('settings.pages.card.creation.outfits'),
+    icon: 'i-solar:clothes-bold-duotone',
+  },
   {
     id: 'proactivity',
     label: t('settings.pages.card.creation.proactivity', 'Proactivity'),
@@ -696,6 +777,10 @@ async function saveCard(card: Card): Promise<boolean> {
             provider: selectedSpeechProvider.value || speechProvider.value,
             model: selectedSpeechModel.value || defaultSpeechModel.value,
             voice_id: selectedSpeechVoiceId.value || defaultSpeechVoiceId.value,
+            pitch: selectedSpeechPitch.value,
+            rate: selectedSpeechRate.value,
+            language: selectedSpeechLanguage.value,
+            ssml: selectedSpeechSsml.value,
           },
           displayModelId: selectedDisplayModelId.value || defaultDisplayModelId.value,
           activeBackgroundId: selectedActiveBackgroundId.value || 'none',
@@ -736,6 +821,7 @@ async function saveCard(card: Card): Promise<boolean> {
         },
         acting: {
           ...existingAiriExt?.acting,
+          outfits: outfits.value,
           modelExpressionPrompt: selectedActingModelExpressionPrompt.value,
           speechExpressionPrompt: selectedActingSpeechExpressionPrompt.value,
           speechMannerismPrompt: selectedActingSpeechMannerismPrompt.value,
@@ -757,6 +843,12 @@ async function saveCard(card: Card): Promise<boolean> {
           },
         },
         groundingEnabled: groundingEnabled.value,
+        shortTermMemory: {
+          enabled: shortTermMemoryEnabled.value,
+          maxEntries: shortTermMemoryMaxEntries.value,
+          retentionMinutes: shortTermMemoryRetentionMinutes.value,
+          importanceThreshold: shortTermMemoryImportanceThreshold.value,
+        },
         visual_assets: existingAiriExt?.visual_assets || {},
         active_concepts: existingAiriExt?.active_concepts || [],
         eternal_record: existingAiriExt?.eternal_record || { relational_milestones: [], lore_bits: [] },
@@ -810,9 +902,19 @@ function initializeCard(): Card {
   selectedSpeechProvider.value = airiExt?.modules?.speech?.provider || speechProvider.value
   selectedSpeechModel.value = airiExt?.modules?.speech?.model || defaultSpeechModel.value
   selectedSpeechVoiceId.value = airiExt?.modules?.speech?.voice_id || defaultSpeechVoiceId.value
+  selectedSpeechPitch.value = airiExt?.modules?.speech?.pitch ?? 1.0
+  selectedSpeechRate.value = airiExt?.modules?.speech?.rate ?? 1.0
+  selectedSpeechLanguage.value = airiExt?.modules?.speech?.language || ''
+  selectedSpeechSsml.value = airiExt?.modules?.speech?.ssml || ''
   selectedDisplayModelId.value = airiExt?.modules?.displayModelId || defaultDisplayModelId.value
   const activeBg = airiExt?.modules?.activeBackgroundId || (airiExt?.modules as any)?.preferredBackgroundId
   selectedActiveBackgroundId.value = !activeBg ? 'none' : activeBg
+
+  // Initialize outfits
+  if (airiExt?.outfits) {
+    outfits.value = airiExt.outfits.map((outfit) => ({ ...outfit, expressionCount: outfit.expressions.length }))
+    selectedOutfitId.value = airiExt.outfits.length > 0 ? airiExt.outfits[0].id : ''
+  }
   selectedArtistryProvider.value = airiExt?.artistry?.provider || defaultArtistryProvider.value
   selectedArtistryModel.value = airiExt?.artistry?.model || ''
   selectedArtistryPromptPrefix.value = airiExt?.artistry?.promptPrefix || ''
@@ -866,6 +968,10 @@ function initializeCard(): Card {
   dreamStateEnabled.value = airiExt?.dreamState?.enabled ?? false
   dreamStateStrictAfkGating.value = airiExt?.dreamState?.strictAfkGating ?? true
   groundingEnabled.value = airiExt?.groundingEnabled ?? false
+  shortTermMemoryEnabled.value = airiExt?.shortTermMemory?.enabled ?? false
+  shortTermMemoryMaxEntries.value = airiExt?.shortTermMemory?.maxEntries ?? 100
+  shortTermMemoryRetentionMinutes.value = airiExt?.shortTermMemory?.retentionMinutes ?? 60
+  shortTermMemoryImportanceThreshold.value = airiExt?.shortTermMemory?.importanceThreshold ?? 0.5
 
   loadActingSpeechCapabilities(selectedSpeechProvider.value || speechProvider.value)
 
@@ -1168,6 +1274,15 @@ function handleGeneratorSave(newValue: string) {
             :insert-speech-mannerism="insertSpeechMannerism"
             @sparkle-click="openSparkleGenerator"
           />
+          <CardCreationTabOutfits
+            v-else-if="activeTab === 'outfits'"
+            :outfits="outfits"
+            :selectedOutfitId="selectedOutfitId"
+            @update:selectedOutfitId="selectedOutfitId = $event"
+            @addOutfit="addOutfit"
+            @deleteOutfit="deleteOutfit"
+            @update:outfits="updateOutfits"
+          />
           <CardCreationTabModules
             v-else-if="activeTab === 'modules'"
             v-model:selected-consciousness-provider="selectedConsciousnessProvider"
@@ -1175,6 +1290,10 @@ function handleGeneratorSave(newValue: string) {
             v-model:selected-speech-provider="selectedSpeechProvider"
             v-model:selected-speech-model="selectedSpeechModel"
             v-model:selected-speech-voice-id="selectedSpeechVoiceId"
+            v-model:selected-speech-pitch="selectedSpeechPitch"
+            v-model:selected-speech-rate="selectedSpeechRate"
+            v-model:selected-speech-language="selectedSpeechLanguage"
+            v-model:selected-speech-ssml="selectedSpeechSsml"
             v-model:selected-display-model-id="selectedDisplayModelId"
             v-model:selected-active-background-id="selectedActiveBackgroundId"
             :consciousness-provider-options="consciousnessProviderOptions"
@@ -1192,6 +1311,14 @@ function handleGeneratorSave(newValue: string) {
             :default-display-model-id-placeholder="getDefaultPlaceholder(defaultDisplayModelId)"
             :consciousness-provider-active="Boolean(consciousnessProvider)"
             :speech-provider-active="Boolean(speechProvider)"
+            :speech-pitch="1.0"
+            :speech-rate="1.0"
+            :speech-language="''"
+            :speech-ssml="''"
+            speech-pitch-placeholder="1.0"
+            speech-rate-placeholder="1.0"
+            speech-language-placeholder="e.g. en-US"
+            speech-ssml-placeholder="SSML markup for speech synthesis"
           />
           <CardCreationTabArtistry
             v-else-if="activeTab === 'artistry'"
@@ -1226,6 +1353,10 @@ function handleGeneratorSave(newValue: string) {
             v-model:dream-state-enabled="dreamStateEnabled"
             v-model:dream-state-strict-afk-gating="dreamStateStrictAfkGating"
             v-model:grounding-enabled="groundingEnabled"
+            v-model:short-term-memory-enabled="shortTermMemoryEnabled"
+            v-model:short-term-memory-max-entries="shortTermMemoryMaxEntries"
+            v-model:short-term-memory-retention-minutes="shortTermMemoryRetentionMinutes"
+            v-model:short-term-memory-importance-threshold="shortTermMemoryImportanceThreshold"
             :sensor-payload="sensorPayload"
             :static-sample-payload="staticSamplePayload"
             @sparkle-click="openSparkleGenerator"

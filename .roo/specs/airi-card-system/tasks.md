@@ -2,17 +2,17 @@
 
 ## Phase 1: Type System & Data Model
 
-- [ ] **T1.1**: Add new config type interfaces to [`airi-card.ts`](packages/stage-ui/src/stores/modules/airi-card.ts)
+- [x] **T1.1**: Add new config type interfaces to [`airi-card.ts`](packages/stage-ui/src/stores/modules/airi-card.ts)
   - `HeartbeatConfig` (enabled, intervalMinutes, prompt, injectIntoPrompt, useAsLocalGate, contextOptions, schedule, respectSchedule)
   - `DreamStateConfig` (enabled, strictAfkGating, journalingThreshold, maxSessionsPerDay, sessionTimeoutMinutes, afkThresholdMinutes, minConversationTurns, lastProcessedAt, dailyRunDate, dailyRunCount)
   - `ShortTermMemoryConfig` (enabled, maxEntries, retentionMinutes, importanceThreshold)
   - `ActingConfig` (modelExpressionPrompt, speechExpressionPrompt, speechMannerismPrompt, idleAnimations)
   - `AiriOutfit` (id, name, type, expressions, backgroundId, artistry, manifestation)
   - `CharacterGenerationConfig` (enabled, provider, model, known, advanced, compaction, importedPresetMeta)
-- [ ] **T1.2**: Expand `AiriExtension` interface with all new fields from fork (acting, heartbeats, dreamState, shortTermMemory, generation, outfits, imageJournal, visual_assets, eternal_record, proactivity_metrics, active_concepts, active_state, groundingEnabled)
-- [ ] **T1.3**: Expand `modules` within `AiriExtension` — add `consciousness.moduleConfigs`, `speech.pitch/rate/ssml/language`, `vrm` object, `live2d` object with activeExpressions/modelParameters, `active_expressions`, `selectedModelId` legacy key, make `activeBackgroundId` nullable
-- [ ] **T1.4**: Move `artistry` from `modules.artistry` to top-level `AiriExtension.artistry` — add `autonomousMonitorEnabled`, `autonomousHistoryDepth`, `options`; preserve `LegacyArtistrySettings` type for reading old data
-- [ ] **T1.5**: Verify [`Card`](packages/ccc/src/define/card.ts:113) type in `packages/ccc` is compatible with fork (no changes needed if identical)
+- [x] **T1.2**: Expand `AiriExtension` interface with all new fields from fork (acting, heartbeats, dreamState, shortTermMemory, generation, outfits, imageJournal, visual_assets, eternal_record, proactivity_metrics, active_concepts, active_state, groundingEnabled)
+- [x] **T1.3**: Expand `modules` within `AiriExtension` — add `consciousness.moduleConfigs`, `speech.pitch/rate/ssml/language`, `vrm` object, `live2d` object with activeExpressions/modelParameters, `active_expressions`, `selectedModelId` legacy key, make `activeBackgroundId` nullable
+- [x] **T1.4**: Move `artistry` from `modules.artistry` to top-level `AiriExtension.artistry` — add `autonomousMonitorEnabled`, `autonomousHistoryDepth`, `options`; preserve `LegacyArtistrySettings` type for reading old data
+- [x] **T1.5**: Verify [`Card`](packages/ccc/src/define/card.ts:113) type in `packages/ccc` is compatible with fork (no changes needed if identical)
 
 ## Phase 2: Store Logic
 
@@ -37,38 +37,38 @@
 
 ## Phase 3: Import/Export Logic
 
-- [ ] **T3.1**: Add `base64ToUtf8(input)` utility function to card index page
-- [ ] **T3.2**: Add `utf8ToBase64(input)` utility function to card index page
-- [ ] **T3.3**: Add `parsePngCharaPayload(buffer)` — extracts `chara` text chunk from PNG, base64-decodes, parses as `ccv3.CharacterCardV3` or `Card`
-- [ ] **T3.4**: Add `parseImportedCard(content)` — parses JSON string as `Card` type
-- [ ] **T3.5**: Add `parseStMessageExamples(exampleStr)` — converts ST message examples format to our greeting format
-- [ ] **T3.6**: Add `getImportedCardName(card)` and `withImportedCardName(card, name)` — name extraction/mutation helpers
-- [ ] **T3.7**: Add `getUniqueImportedCardName(baseName)` — ensures imported card names are unique
-- [ ] **T3.8**: Add `addCardPreviewNormalize(card)` — normalizes imported card data with defaults
-- [ ] **T3.9**: Add `exportCard(cardId)` — AIRI-native JSON export with full extension data and embedded backgrounds
-- [ ] **T3.10**: Add `buildCharaCardV2(card)` — maps AIRI card to chara_card_v2 format with AIRI extensions under `data.extensions.airi`
-- [ ] **T3.11**: Add `getCardWithExportedBackground(cardId)` — resolves background ID to data URL for export embedding
-- [ ] **T3.12**: Add PNG chunk utilities: `createCrc32Table()`, `crc32()`, `concatUint8Arrays()`, `uint32ToBytes()`, `createPngTextChunk()`, `injectPngTextChunk()`
-- [ ] **T3.13**: Add `loadImageElement(src)` — loads image for PNG composition
-- [ ] **T3.14**: Add `composeCardExportPng(previewImage)` — composes framed PNG for export
-- [ ] **T3.15**: Add `exportCardPng(cardId)` — full SillyTavern PNG export pipeline (load image → compose → build chara_card_v2 → inject chunk → download)
-- [ ] **T3.16**: Add import wizard state to index page: `activeBrowserSource`, `isImportWizardOpen`, `importedCardData`
-- [ ] **T3.17**: Add `isElectron` computed and `handleCharaCardDownloaded()` for Electron IPC card download handling
-- [ ] **T3.18**: Add file input handling for JSON and PNG import (triggers parse → wizard flow)
-- [ ] **T3.19**: Add search/sort state: `searchQuery`, `sortOption`, `filteredCards`, `sortedFilteredCards`
-- [ ] **T3.20**: Add `CardItem` interface and `ImportedCardPayload` type to index page
-- [ ] **T3.21**: Wire `@export-json` and `@export-png` events from CardListItem to `exportCard()` and `exportCardPng()`
+- [x] **T3.1**: Add `base64ToUtf8(input)` utility function to card index page
+- [x] **T3.2**: Add `utf8ToBase64(input)` utility function to card index page
+- [x] **T3.3**: Add `parsePngCharaPayload(buffer)` — extracts `chara` text chunk from PNG, base64-decodes, parses as `ccv3.CharacterCardV3` or `Card`
+- [x] **T3.4**: Add `parseImportedCard(content)` — parses JSON string as `Card` type
+- [x] **T3.5**: Add `parseStMessageExamples(exampleStr)` — converts ST message examples format to our greeting format
+- [x] **T3.6**: Add `getImportedCardName(card)` and `withImportedCardName(card, name)` — name extraction/mutation helpers
+- [x] **T3.7**: Add `getUniqueImportedCardName(baseName)` — ensures imported card names are unique
+- [x] **T3.8**: Add `addCardPreviewNormalize(card)` — normalizes imported card data with defaults
+- [x] **T3.9**: Add `exportCard(cardId)` — AIRI-native JSON export with full extension data and embedded backgrounds
+- [x] **T3.10**: Add `buildCharaCardV2(card)` — maps AIRI card to chara_card_v2 format with AIRI extensions under `data.extensions.airi`
+- [x] **T3.11**: Add `getCardWithExportedBackground(cardId)` — resolves background ID to data URL for export embedding
+- [x] **T3.12**: Add PNG chunk utilities: `createCrc32Table()`, `crc32()`, `concatUint8Arrays()`, `uint32ToBytes()`, `createPngTextChunk()`, `injectPngTextChunk()`
+- [x] **T3.13**: Add `loadImageElement(src)` — loads image for PNG composition
+- [x] **T3.14**: Add `composeCardExportPng(previewImage)` — composes framed PNG for export
+- [x] **T3.15**: Add `exportCardPng(cardId)` — full SillyTavern PNG export pipeline (load image → compose → build chara_card_v2 → inject chunk → download)
+- [x] **T3.16**: Add import wizard state to index page: `activeBrowserSource`, `isImportWizardOpen`, `importedCardData`
+- [x] **T3.17**: Add `isElectron` computed and `handleCharaCardDownloaded()` for Electron IPC card download handling
+- [x] **T3.18**: Add file input handling for JSON and PNG import (triggers parse → wizard flow)
+- [x] **T3.19**: Add search/sort state: `searchQuery`, `sortOption`, `filteredCards`, `sortedFilteredCards`
+- [x] **T3.20**: Add `CardItem` interface and `ImportedCardPayload` type to index page
+- [x] **T3.21**: Wire `@export-json` and `@export-png` events from CardListItem to `exportCard()` and `exportCardPng()`
 
 ## Phase 4: UI Components — CardImportWizard
 
-- [ ] **T4.1**: Create [`CardImportWizard.vue`](packages/stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue) — multi-step wizard component
-- [ ] **T4.2**: Implement Step 1: Name + display model selection
-- [ ] **T4.3**: Implement Step 2: Consciousness provider/model selection
-- [ ] **T4.4**: Implement Step 3: Speech provider/model/voice selection
-- [ ] **T4.5**: Implement Step 4: Toggle defaults (artistry autonomous, dream state, proactivity)
-- [ ] **T4.6**: Implement `finalizeImport()` — builds complete AiriCard from imported data + wizard selections, emits `@import`
-- [ ] **T4.7**: Implement step navigation (next/prev) and validation per step
-- [ ] **T4.8**: Add `hasUserPattern` computed for detecting user name patterns in imported data
+- [x] **T4.1**: Create [`CardImportWizard.vue`](packages/stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue) — multi-step wizard component
+- [x] **T4.2**: Implement Step 1: Name + display model selection
+- [x] **T4.3**: Implement Step 2: Consciousness provider/model selection
+- [x] **T4.4**: Implement Step 3: Speech provider/model/voice selection
+- [x] **T4.5**: Implement Step 4: Toggle defaults (artistry autonomous, dream state, proactivity)
+- [x] **T4.6**: Implement `finalizeImport()` — builds complete AiriCard from imported data + wizard selections, emits `@import`
+- [x] **T4.7**: Implement step navigation (next/prev) and validation per step
+- [x] **T4.8**: Add `hasUserPattern` computed for detecting user name patterns in imported data
 
 ## Phase 5: UI Components — CardCreationDialog Expansion
 
@@ -118,8 +118,8 @@
 
 ## Phase 10: Electron IPC Integration
 
-- [ ] **T10.1**: Register `handleCharaCardDownloaded` IPC handler in [`apps/stage-tamagotchi`](apps/stage-tamagotchi) Electron main process
-- [ ] **T10.2**: Add Eventa contract for card download events in [`apps/stage-tamagotchi/src/shared`](apps/stage-tamagotchi/src/shared)
+- [x] **T10.1**: Register `handleCharaCardDownloaded` IPC handler in [`apps/stage-tamagotchi`](apps/stage-tamagotchi) Electron main process
+- [x] **T10.2**: Add Eventa contract for card download events in [`apps/stage-tamagotchi/src/shared`](apps/stage-tamagotchi/src/shared)
 
 ## Phase 11: Testing & Validation
 

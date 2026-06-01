@@ -2,7 +2,6 @@
 import type { AiriExtension } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import type { AiriCard } from@proj-airi/stage-ui/stores/modules/airi-card
 import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
@@ -250,7 +249,7 @@ async function finalizeImport() {
       })
     }
 
-    const finalCard = {
+    // const finalCard = {
       ...props.cardData,
       name: name.value.trim(),
       description: replacePatterns(cardDescription.value),

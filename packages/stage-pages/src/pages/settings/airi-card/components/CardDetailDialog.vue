@@ -273,92 +273,55 @@ interface Tab {
 // Active tab ID state
 const activeTabId = ref('')
 
-// Tabs for card details
+// Tabs for card details — always present, matching CardCreationDialog tab structure
 const tabs = computed<Tab[]>(() => {
-  const availableTabs: Tab[] = []
-
-  // Description tab - always show if there's description
-  if (selectedCard.value?.description) {
-    availableTabs.push({
-      id: 'description',
-      label: t('settings.pages.card.description_label'),
-      icon: 'i-solar:document-text-linear',
-    })
-  }
-
-  // Notes tab - only show if there are creator notes
-  if (selectedCard.value?.notes) {
-    availableTabs.push({
-      id: 'notes',
-      label: t('settings.pages.card.creator_notes'),
-      icon: 'i-solar:notes-linear',
-    })
-  }
-
-  // Character tab - only show if there are character settings
-  if (Object.values(characterSettings.value).some((value) => !!value)) {
-    availableTabs.push({
-      id: 'character',
-      label: t('settings.pages.card.character'),
-      icon: 'i-solar:user-rounded-linear',
-    })
-  }
-
-  // Modules tab - always show
-  availableTabs.push({
-    id: 'modules',
-    label: t('settings.pages.card.modules'),
-    icon: 'i-solar:tuning-square-linear',
-  })
-
-  // Gallery tab - always show
-  availableTabs.push({
-    id: 'gallery',
-    label: 'Gallery',
-    icon: 'i-solar:gallery-linear',
-  })
-
-  // Acting tab - show if card has acting config
-  if (selectedCard.value?.extensions?.airi?.acting) {
-    availableTabs.push({
-      id: 'acting',
-      label: 'Acting',
-      icon: 'i-solar:mask-happly-bold-duotone',
-    })
-  }
-
-  // Artistry tab - show if card has artistry config
-  if (selectedCard.value?.extensions?.airi?.artistry) {
-    availableTabs.push({
-      id: 'artistry',
-      label: 'Artistry',
-      icon: 'i-solar:gallery-bold-duotone',
-    })
-  }
-
-  // Proactivity tab - show if card has heartbeats, dream state, or grounding
-  if (
-    selectedCard.value?.extensions?.airi?.heartbeats ||
-    selectedCard.value?.extensions?.airi?.dreamState ||
-    selectedCard.value?.extensions?.airi?.groundingEnabled !== undefined
-  ) {
-    availableTabs.push({
-      id: 'proactivity',
-      label: 'Proactivity',
-      icon: 'i-solar:heart-pulse-bold-duotone',
-    })
-  }
-
-  // Generation tab - show if card has generation config
-  if (selectedCard.value?.extensions?.airi?.generation) {
-    availableTabs.push({
+  return [
+    {
+      id: 'identity',
+      label: t('settings.pages.card.creation.identity'),
+      icon: 'i-solar:emoji-funny-square-bold-duotone',
+    },
+    {
+      id: 'behavior',
+      label: t('settings.pages.card.creation.behavior'),
+      icon: 'i-solar:chat-round-line-bold-duotone',
+    },
+    {
       id: 'generation',
-      label: 'Generation',
+      label: t('settings.pages.card.tabs.generation'),
       icon: 'i-solar:tuning-square-bold-duotone',
-    })
-  }
-
-  return availableTabs
+    },
+    {
+      id: 'acting',
+      label: t('settings.pages.card.tabs.acting'),
+      icon: 'i-solar:mask-happly-bold-duotone',
+    },
+    {
+      id: 'modules',
+      label: t('settings.pages.card.modules'),
+      icon: 'i-solar:widget-4-bold-duotone',
+    },
+    {
+      id: 'artistry',
+      label: t('settings.pages.modules.artistry.title'),
+      icon: 'i-solar:gallery-bold-duotone',
+    },
+    {
+      id: 'outfits',
+      label: t('settings.pages.card.creation.outfits'),
+      icon: 'i-solar:clothes-bold-duotone',
+    },
+    {
+      id: 'proactivity',
+      label: t('settings.pages.card.tabs.proactivity'),
+      icon: 'i-solar:heart-pulse-bold-duotone',
+    },
+    {
+      id: 'gallery',
+      label: 'Gallery',
+      icon: 'i-solar:gallery-linear',
+    },
+  ]
 })
 
 async function handleSetAsBackground(entry: any) {
@@ -516,65 +479,211 @@ function getModuleDisplayValue(value: string | undefined, defaultValue: string |
               </div>
             </div>
 
-            <!-- Creator notes -->
-            <div v-if="activeTab === 'notes' && selectedCard.notes">
-              <div
-                bg="white/60 dark:black/30"
-                border="~ neutral-200/50 dark:neutral-700/30"
-                max-h-60
-                overflow-auto
-                whitespace-pre-line
-                rounded-lg
-                p-4
-                text-neutral-700
-                sm:max-h-80
-                dark:text-neutral-300
-                transition="all duration-200"
-                hover="bg-white/80 dark:bg-black/40"
-                v-html="highlightTagToHtml(selectedCard.notes)"
-              />
+            <!-- Identity tab: name, nickname, description, notes, version -->
+            <div v-if="activeTab === 'identity'">
+              <div flex="~ col" gap-4>
+                <div grid="~ cols-1 sm:cols-2" gap-4>
+                  <div
+                    flex="~ col"
+                    bg="white/60 dark:black/30"
+                    gap-1
+                    rounded-lg
+                    p-3
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                  >
+                    <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                      <div i-solar:user-rounded-linear />
+                      {{ t('settings.pages.card.creation.name') }}
+                    </span>
+                    <div truncate font-medium>
+                      {{ selectedCard.name || 'Unnamed' }}
+                    </div>
+                  </div>
+                  <div
+                    flex="~ col"
+                    bg="white/60 dark:black/30"
+                    gap-1
+                    rounded-lg
+                    p-3
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                  >
+                    <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                      <div i-solar:emoji-funny-square-bold-duotone />
+                      {{ t('settings.pages.card.creation.nickname') }}
+                    </span>
+                    <div truncate font-medium>
+                      {{ selectedCard.nickname || 'None' }}
+                    </div>
+                  </div>
+                </div>
+                <div v-if="selectedCard.description" flex="~ col" gap-2>
+                  <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                    <div i-solar:document-text-linear />
+                    {{ t('settings.pages.card.description_label') }}
+                  </span>
+                  <div
+                    bg="white/60 dark:black/30"
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                    max-h-60
+                    overflow-auto
+                    whitespace-pre-line
+                    rounded-lg
+                    p-3
+                    text-neutral-700
+                    sm:max-h-80
+                    dark:text-neutral-300
+                    v-html="highlightTagToHtml(selectedCard.description)"
+                  />
+                </div>
+                <div v-if="selectedCard.notes" flex="~ col" gap-2>
+                  <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                    <div i-solar:notes-linear />
+                    {{ t('settings.pages.card.creator_notes') }}
+                  </span>
+                  <div
+                    bg="white/60 dark:black/30"
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                    max-h-60
+                    overflow-auto
+                    whitespace-pre-line
+                    rounded-lg
+                    p-3
+                    text-neutral-700
+                    sm:max-h-80
+                    dark:text-neutral-300
+                    v-html="highlightTagToHtml(selectedCard.notes)"
+                  />
+                </div>
+                <div
+                  v-if="!selectedCard.description && !selectedCard.notes"
+                  class="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700/50 dark:bg-neutral-900/50 dark:text-neutral-400"
+                >
+                  No identity details set for this card.
+                </div>
+              </div>
             </div>
 
-            <!-- Description section -->
-            <div v-if="activeTab === 'description' && selectedCard.description">
-              <div
-                bg="white/60 dark:black/30"
-                max-h-60
-                overflow-auto
-                whitespace-pre-line
-                rounded-lg
-                p-4
-                sm:max-h-80
-                text="neutral-600 dark:neutral-300"
-                border="~ neutral-200/50 dark:neutral-700/30"
-                v-html="highlightTagToHtml(selectedCard.description)"
-              />
-            </div>
-
-            <!-- Character -->
-            <div v-if="activeTab === 'character' && Object.values(characterSettings).some((value) => !!value)">
-              <div flex="~ col" max-h-60 gap-4 overflow-auto pr-1 sm:max-h-80>
-                <template v-for="(value, key) in characterSettings" :key="key">
-                  <div v-if="value" flex="~ col" gap-2>
-                    <h2 text-lg text-neutral-500 font-medium dark:text-neutral-400>
-                      {{ t(`settings.pages.card.${key.toLowerCase()}`) }}
-                    </h2>
+            <!-- Behavior tab: personality, scenario, greetings -->
+            <div v-if="activeTab === 'behavior'">
+              <div flex="~ col" gap-4>
+                <div v-if="selectedCard.personality" flex="~ col" gap-2>
+                  <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                    <div i-solar:chat-round-line-bold-duotone />
+                    {{ t('settings.pages.card.personality') }}
+                  </span>
+                  <div
+                    bg="white/60 dark:black/30"
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                    max-h-40
+                    overflow-auto
+                    whitespace-pre-line
+                    rounded-lg
+                    p-3
+                    text-sm
+                    text-neutral-700
+                    dark:text-neutral-300
+                    v-html="highlightTagToHtml(selectedCard.personality)"
+                  />
+                </div>
+                <div v-if="selectedCard.scenario" flex="~ col" gap-2>
+                  <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                    <div i-solar:map-point-linear />
+                    {{ t('settings.pages.card.scenario') }}
+                  </span>
+                  <div
+                    bg="white/60 dark:black/30"
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                    max-h-40
+                    overflow-auto
+                    whitespace-pre-line
+                    rounded-lg
+                    p-3
+                    text-sm
+                    text-neutral-700
+                    dark:text-neutral-300
+                    v-html="highlightTagToHtml(selectedCard.scenario)"
+                  />
+                </div>
+                <div v-if="selectedCard.greetings && selectedCard.greetings.length > 0" flex="~ col" gap-2>
+                  <span flex="~ row" items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400>
+                    <div i-solar:hand-stars-bold-duotone />
+                    {{ t('settings.pages.card.creation.greetings') }}
+                  </span>
+                  <div flex="~ col" gap-2>
                     <div
+                      v-for="(greeting, idx) in selectedCard.greetings"
+                      :key="idx"
                       bg="white/60 dark:black/30"
                       border="~ neutral-200/50 dark:neutral-700/30"
-                      transition="all duration-200"
-                      hover="bg-white/80 dark:bg-black/40"
-                      max-h-none
-                      overflow-auto
-                      whitespace-pre-line
                       rounded-lg
                       p-3
+                      text-sm
                       text-neutral-700
                       dark:text-neutral-300
-                      v-html="highlightTagToHtml(value)"
+                      v-html="highlightTagToHtml(greeting)"
                     />
                   </div>
-                </template>
+                </div>
+                <div
+                  v-if="
+                    !selectedCard.personality &&
+                    !selectedCard.scenario &&
+                    (!selectedCard.greetings || selectedCard.greetings.length === 0)
+                  "
+                  class="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700/50 dark:bg-neutral-900/50 dark:text-neutral-400"
+                >
+                  No behavior configuration set for this card.
+                </div>
+              </div>
+            </div>
+
+            <!-- Outfits tab -->
+            <div v-if="activeTab === 'outfits'">
+              <div flex="~ col" gap-4>
+                <div
+                  v-if="!selectedCard.extensions?.airi?.outfits || selectedCard.extensions.airi.outfits.length === 0"
+                  class="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700/50 dark:bg-neutral-900/50 dark:text-neutral-400"
+                >
+                  No outfits configured for this card.
+                </div>
+                <div v-else grid="~ cols-1 sm:cols-2" gap-4>
+                  <div
+                    v-for="outfit in selectedCard.extensions.airi.outfits"
+                    :key="outfit.id"
+                    bg="white/60 dark:black/30"
+                    border="~ neutral-200/50 dark:neutral-700/30"
+                    rounded-lg
+                    p-4
+                  >
+                    <div flex="~ row" items-center gap-2 mb-2>
+                      <div i-solar:clothes-bold-duotone />
+                      <span font-medium>{{ outfit.name }}</span>
+                      <span
+                        class="ml-auto rounded-full bg-primary-100 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+                      >
+                        {{ outfit.type }}
+                      </span>
+                    </div>
+                    <div
+                      v-if="outfit.expressions && Object.keys(outfit.expressions).length > 0"
+                      class="mt-2 text-sm text-neutral-500 dark:text-neutral-400"
+                    >
+                      <span class="text-xs">Expressions:</span>
+                      <div flex="~ row" gap-1 flex-wrap mt-1>
+                        <span
+                          v-for="(expr, key) in outfit.expressions"
+                          :key="key"
+                          class="inline-block rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                        >
+                          {{ key }}: {{ expr }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="outfit.backgroundId" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      Background: {{ outfit.backgroundId }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

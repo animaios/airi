@@ -156,6 +156,7 @@ const searchQuery = ref('')
 const sortOption = ref('nameAsc')
 
 const inputFiles = ref<File[]>([])
+const isImporting = ref(false)
 
 const cardSourceLinks = [
   {
@@ -328,6 +329,7 @@ watch(inputFiles, async (newFiles) => {
   const file = newFiles[0]
   if (!file) return
 
+  isImporting.value = true
   try {
     let importedCard: Record<string, unknown>
 
@@ -356,6 +358,8 @@ watch(inputFiles, async (newFiles) => {
     toast.error('Error processing card file', {
       description: error instanceof Error ? error.message : 'Unknown error',
     })
+  } finally {
+    isImporting.value = false
   }
 })
 
@@ -873,6 +877,31 @@ function getDisplayModelId(id: string) {
       character site exports in a portable format.
     </div>
   </div>
+
+  <!-- Import progress overlay -->
+  <Transition
+    enter-active-class="transition-opacity duration-200"
+    leave-active-class="transition-opacity duration-200"
+    enter-from-class="opacity-0"
+    leave-to-class="opacity-0"
+  >
+    <div
+      v-if="isImporting"
+      class="fixed inset-0 z-200 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
+    >
+      <div
+        class="flex flex-col items-center gap-4 rounded-2xl border border-neutral-200 bg-white/95 p-8 shadow-2xl dark:border-neutral-700 dark:bg-neutral-800/95"
+      >
+        <div
+          class="i-solar:upload-minimalistic-bold-duotone text-5xl text-primary-500 dark:text-primary-400 animate-pulse"
+        />
+        <p class="text-lg font-medium text-neutral-700 dark:text-neutral-200">
+          {{ t('settings.pages.card.import.title', 'Importing Card...') }}
+        </p>
+        <p class="text-sm text-neutral-500 dark:text-neutral-400">Please wait while the card is being processed.</p>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <route lang="yaml">
