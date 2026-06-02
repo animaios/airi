@@ -36,6 +36,7 @@
     "@tresjs/post-processing": "^3.7.1",
     "@vueuse/core": "^14.2.1",
     "culori": "^4.0.2",
+    "localforage": "^1.10.0",
     "es-toolkit": "catalog:",
     "pinia": "^3.0.4",
     "postprocessing": "^6.39.1",

@@ -17,6 +17,19 @@ export type TrackingMode = 'camera' | 'mouse' | 'none'
 export type InteractionMode = 'orbit' | 'tactile' | 'drag' | 'positioning'
 export type HexColor = string & { __hex?: true }
 
+export type ScenePhase = 'pending' | 'loading' | 'binding' | 'mounted' | 'error' | 'no-model'
+
+export interface SceneBootstrap {
+  cacheHit: boolean
+  cameraDistance: number
+  cameraPosition: Vec3
+  eyeHeight: number
+  lookAtTarget: Vec3
+  modelOffset: Vec3
+  modelOrigin: Vec3
+  modelSize: Vec3
+}
+
 export interface FieldBase<T> {
   space: string // name space
   key: string // name key
@@ -99,6 +112,7 @@ export const useModelStore = defineStore('modelStore', () => {
   const scale = useLocalStorage('settings/stage-ui-three/scale', 1)
   const lastModelSrc = useLocalStorage('settings/stage-ui-three/lastModelSrc', '')
   const lastModelIdentity = useLocalStorage('settings/stage-ui-three/lastModelIdentity', '')
+  const lastCommittedModelSrc = useLocalStorage('settings/stage-ui-three/lastCommittedModelSrc', '')
 
   const modelSize = useLocalStorage('settings/stage-ui-three/modelSize', { x: 0, y: 0, z: 0 })
   const modelOrigin = useLocalStorage('settings/stage-ui-three/modelOrigin', { x: 0, y: 0, z: 0 })
@@ -112,7 +126,7 @@ export const useModelStore = defineStore('modelStore', () => {
   const interactionMode = useLocalStorage<InteractionMode>('settings/stage-ui-three/interaction-mode', 'orbit')
 
   const lookAtTarget = useLocalStorage('settings/stage-ui-three/lookAtTarget', { x: 0, y: 0, z: 0 })
-  const trackingMode = useLocalStorage('settings/stage-ui-three/trackingMode', 'none' as 'camera' | 'mouse' | 'none')
+  const trackingMode = useLocalStorage<TrackingMode>('settings/stage-ui-three/trackingMode', 'none')
   const eyeHeight = useLocalStorage('settings/stage-ui-three/eyeHeight', 0)
 
   const availableExpressions = useLocalStorage<string[]>('settings/stage-ui-three/availableExpressions', [])
@@ -124,6 +138,29 @@ export const useModelStore = defineStore('modelStore', () => {
 
   const vrmIdleAnimation = useLocalStorage<string>('settings/stage-ui-three/vrmIdleAnimation', 'idleLoop')
   const vrmIdleCycleEnabled = useLocalStorage<boolean>('settings/stage-ui-three/vrmIdleCycleEnabled', false)
+
+  // === Scene binding transaction state ===
+  const scenePhase = ref<ScenePhase>('pending')
+  const sceneTransactionDepth = ref(0)
+  const sceneMutationLocked = ref(false)
+
+  function beginSceneBindingTransaction() {
+    sceneTransactionDepth.value += 1
+  }
+
+  function endSceneBindingTransaction() {
+    if (sceneTransactionDepth.value > 0) {
+      sceneTransactionDepth.value -= 1
+    }
+  }
+
+  function resetSceneBindingTransactions() {
+    sceneTransactionDepth.value = 0
+  }
+
+  function setScenePhase(phase: ScenePhase) {
+    scenePhase.value = phase
+  }
 
   function resetModelStore() {
     modelSize.value = { x: 0, y: 0, z: 0 }
@@ -225,6 +262,7 @@ export const useModelStore = defineStore('modelStore', () => {
     scale,
     lastModelSrc,
     lastModelIdentity,
+    lastCommittedModelSrc,
 
     modelSize,
     modelOrigin,
@@ -270,6 +308,15 @@ export const useModelStore = defineStore('modelStore', () => {
     activeVrmParser,
     activeVrmIdentity,
     detectedWardrobe,
+
+    // Scene binding transaction state
+    scenePhase,
+    sceneTransactionDepth,
+    sceneMutationLocked,
+    beginSceneBindingTransaction,
+    endSceneBindingTransaction,
+    resetSceneBindingTransactions,
+    setScenePhase,
 
     onShouldUpdateView,
     shouldUpdateView,
