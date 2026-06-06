@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 
 import { useSettingsAnalytics } from './analytics'
+import { useSettingsChat } from './chat'
 import { useSettingsControlsIsland } from './controls-island'
 import { useSettingsDeveloper } from './developer'
 import { useSettingsGeneral } from './general'
@@ -12,6 +13,7 @@ export * from './analytics'
 // Export sub-stores
 export * from './audio-device'
 export * from './beat-sync'
+export * from './chat'
 export * from './controls-island'
 export * from './developer'
 export * from './general'
@@ -31,6 +33,7 @@ export { DEFAULT_THEME_COLORS_HUE } from './theme'
 export const useSettings = defineStore('settings', () => {
   const general = useSettingsGeneral()
   const analytics = useSettingsAnalytics()
+  const chat = useSettingsChat()
   const stageModel = useSettingsStageModel()
   const spine = useSettingsSpine()
   const theme = useSettingsTheme()
@@ -41,6 +44,7 @@ export const useSettings = defineStore('settings', () => {
     await stageModel.resetState()
     analytics.resetState()
     general.resetState()
+    chat.resetState()
     spine.resetState()
     theme.resetState()
     controlsIsland.resetState()
@@ -50,6 +54,7 @@ export const useSettings = defineStore('settings', () => {
   // Extract refs from sub-stores to maintain proper reactivity
   const generalRefs = storeToRefs(general)
   const analyticsRefs = storeToRefs(analytics)
+  const chatRefs = storeToRefs(chat)
   const stageModelRefs = storeToRefs(stageModel)
   const spineRefs = storeToRefs(spine)
   const themeRefs = storeToRefs(theme)
@@ -63,6 +68,9 @@ export const useSettings = defineStore('settings', () => {
     language: generalRefs.language,
     analyticsEnabled: analyticsRefs.analyticsEnabled,
     websocketSecureEnabled: generalRefs.websocketSecureEnabled,
+
+    // Chat settings
+    combineSystemMessages: chatRefs.combineSystemMessages,
 
     // Stage model settings
     stageModelRenderer: stageModelRefs.stageModelRenderer,

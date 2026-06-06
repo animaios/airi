@@ -282,10 +282,10 @@ app
     }
 
     injeca.invoke({
-      dependsOn: { setupCardDownloadInterception },
-      callback: (deps) => {
+      dependsOn: {},
+      callback: () => {
         const { context } = createContext(ipcMain)
-        deps.setupCardDownloadInterception({ context })
+        setupCardDownloadInterception({ context })
       },
     })
 
