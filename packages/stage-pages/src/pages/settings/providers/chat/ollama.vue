@@ -17,7 +17,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 const providerId = 'ollama'
 const providersStore = useProvidersStore()
-const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, any>> }
+const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, Record<string, any>>> }
 
 // Define computed properties for credentials
 const baseUrl = computed({

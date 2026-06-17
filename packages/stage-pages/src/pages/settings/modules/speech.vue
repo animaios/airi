@@ -96,8 +96,7 @@ onMounted(async () => {
 
 async function bindVoicePack(pack: (typeof voicePacks.value)[number]) {
   const bound = airiCardStore.bindVoicePackToActiveCard(pack)
-  if (!bound)
-    return
+  if (!bound) return
   await speechStore.loadVoicesForProvider(activeSpeechProvider.value, activeSpeechModel.value || undefined)
 }
 
@@ -134,7 +133,7 @@ async function generateTestSpeech() {
 
   const provider = (await providersStore.getProviderInstance(
     activeSpeechProvider.value,
-  )) as SpeechProviderWithExtraOptions<string, any>
+  )) as SpeechProviderWithExtraOptions<string, Record<string, unknown>>
   if (!provider) {
     return
   }
@@ -169,8 +168,7 @@ async function generateTestSpeech() {
   const voicePack = activeCard.value?.extensions?.airi?.modules?.speech?.voicePack
   if (voicePack) {
     model = voicePack.ttsModelId
-    if (voice.id !== voicePack.voiceId)
-      voice = createVoicePackVoice(voicePack, activeSpeechProvider.value)
+    if (voice.id !== voicePack.voiceId) voice = createVoicePackVoice(voicePack, activeSpeechProvider.value)
   }
 
   isGenerating.value = true
@@ -294,7 +292,10 @@ function handleDeleteProvider(providerId: string) {
           </div>
         </div>
 
-        <div v-if="isLoadingVoicePacks" :class="['flex items-center gap-2', 'text-sm text-neutral-400 dark:text-neutral-500']">
+        <div
+          v-if="isLoadingVoicePacks"
+          :class="['flex items-center gap-2', 'text-sm text-neutral-400 dark:text-neutral-500']"
+        >
           <div i-solar:spinner-line-duotone class="animate-spin text-base" />
           <span>{{ t('settings.pages.modules.speech.sections.section.voice-pack.loading') }}</span>
         </div>
@@ -328,7 +329,11 @@ function handleDeleteProvider(providerId: string) {
                   {{ pack.ttsModelId }} / {{ pack.voiceId }}
                 </div>
               </div>
-              <span :class="['shrink-0 rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400']">
+              <span
+                :class="[
+                  'shrink-0 rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400',
+                ]"
+              >
                 {{ formatCostMultiplier(pack.costMultiplier) }}
               </span>
             </div>

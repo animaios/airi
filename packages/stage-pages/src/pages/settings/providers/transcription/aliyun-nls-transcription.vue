@@ -34,7 +34,7 @@ const regionOptions = [
 
 const hearingStore = useHearingStore()
 const providersStore = useProvidersStore()
-const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, any>> }
+const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, Record<string, any>>> }
 
 providersStore.initializeProvider(providerId)
 
@@ -206,7 +206,9 @@ async function startStreaming() {
 
   try {
     const provider =
-      await providersStore.getProviderInstance<TranscriptionProviderWithExtraOptions<string, any>>(providerId)
+      await providersStore.getProviderInstance<TranscriptionProviderWithExtraOptions<string, Record<string, unknown>>>(
+        providerId,
+      )
     if (!provider) throw new Error('Failed to initialize Aliyun NLS provider.')
 
     const result = await hearingStore.transcription(
