@@ -19,6 +19,19 @@
 import { getState, patchState } from './state.js'
 import type { ExtensionState } from '@roo-code/types'
 
+/**
+ * Minimal shape of the subset of apiConfiguration that provider functions
+ * actually read. The full ExtensionState['apiConfiguration'] type is a deep
+ * intersection of 27+ provider-specific records — we only need these fields.
+ */
+interface ApiConfig {
+  apiKey?: string
+  apiProvider?: string
+  apiModelId?: string
+  modelId?: string
+  baseURL?: string
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -125,19 +138,15 @@ export async function runTask(taskId: string, text: string, onUpdate?: () => voi
           }
         }
       } else if (chunk.type === 'usage') {
-        // Store cost info on the task record via patchState (immutable).
-        const s = getState()
-        const tasks = s.taskHistory || []
-        const idx = tasks.findIndex((t) => t.id === taskId)
-        if (idx !== -1) {
-          const updated = [...tasks]
-          updated[idx] = {
-            ...updated[idx],
-            tokensIn: chunk.inputTokens ?? updated[idx].tokensIn ?? 0,
-            tokensOut: chunk.outputTokens ?? updated[idx].tokensOut ?? 0,
-            totalCost: chunk.totalCost ?? updated[idx].totalCost ?? 0,
-          }
-          patchState({ taskHistory: updated } as Partial<ExtensionState>)
+        // Store cost info on the task record via upsertTask (O(1) + sync).
+        const task = getTask(taskId)
+        if (task) {
+          upsertTask({
+            ...task,
+            tokensIn: chunk.inputTokens || task.tokensIn || 0,
+            tokensOut: chunk.outputTokens || task.tokensOut || 0,
+            totalCost: chunk.totalCost || task.totalCost || 0,
+          })
           onUpdate?.()
         }
       }
@@ -203,11 +212,7 @@ function appendMessage(message: ClineMessage, onUpdate?: () => void): void {
 /**
  * Pick the right streaming function for the configured provider.
  */
-function streamLLM(
-  apiConfig: Record<string, unknown>,
-  systemPrompt: string,
-  messages: LLMMessage[],
-): AsyncGenerator<StreamChunk> {
+function streamLLM(apiConfig: ApiConfig, systemPrompt: string, messages: LLMMessage[]): AsyncGenerator<StreamChunk> {
   const provider = String(apiConfig.apiProvider ?? 'openrouter').toLowerCase()
 
   switch (provider) {
@@ -229,12 +234,18 @@ function streamLLM(
 // ---------------------------------------------------------------------------
 
 async function* streamAnthropic(
-  apiConfig: Record<string, unknown>,
+  apiConfig: ApiConfig,
   systemPrompt: string,
   messages: LLMMessage[],
 ): AsyncGenerator<StreamChunk> {
   const apiKey = String(apiConfig.apiKey ?? '')
   const model = String(apiConfig.apiModelId ?? apiConfig.modelId ?? 'claude-sonnet-4-5')
+
+  // Anthropic expects content as array of content blocks, not a plain string.
+  const anthropicMessages = messages.map((m) => ({
+    role: m.role,
+    content: [{ type: 'text' as const, text: m.content }],
+  }))
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -248,7 +259,7 @@ async function* streamAnthropic(
       model,
       max_tokens: 4096,
       system: systemPrompt,
-      messages,
+      messages: anthropicMessages,
       stream: true,
     }),
   })
@@ -283,7 +294,7 @@ async function* streamAnthropic(
 }
 
 async function* streamOpenAI(
-  apiConfig: Record<string, unknown>,
+  apiConfig: ApiConfig,
   systemPrompt: string,
   messages: LLMMessage[],
 ): AsyncGenerator<StreamChunk> {
@@ -328,7 +339,7 @@ async function* streamOpenAI(
 }
 
 async function* streamGemini(
-  apiConfig: Record<string, unknown>,
+  apiConfig: ApiConfig,
   systemPrompt: string,
   messages: LLMMessage[],
 ): AsyncGenerator<StreamChunk> {
@@ -388,7 +399,7 @@ async function* streamGemini(
 }
 
 async function* streamOpenRouter(
-  apiConfig: Record<string, unknown>,
+  apiConfig: ApiConfig,
   systemPrompt: string,
   messages: LLMMessage[],
 ): AsyncGenerator<StreamChunk> {
@@ -441,7 +452,7 @@ async function* streamOpenRouter(
  */
 async function* parseSSE(
   res: Response,
-  extract: (data: any) => StreamChunk | StreamChunk[] | null,
+  extract: (data: Record<string, unknown>) => StreamChunk | StreamChunk[] | null,
 ): AsyncGenerator<StreamChunk> {
   const reader = res.body?.getReader()
   if (!reader) throw new Error('No response body')
@@ -463,9 +474,9 @@ async function* parseSSE(
       const json = trimmed.slice(5).trim()
       if (json === '[DONE]') continue
 
-      let data: any
+      let data: Record<string, unknown>
       try {
-        data = JSON.parse(json)
+        data = JSON.parse(json) as Record<string, unknown>
       } catch {
         continue
       }
@@ -485,9 +496,9 @@ async function* parseSSE(
     if (trimmed.startsWith('data:')) {
       const json = trimmed.slice(5).trim()
       if (json && json !== '[DONE]') {
-        let data: any
+        let data: Record<string, unknown>
         try {
-          data = JSON.parse(json)
+          data = JSON.parse(json) as Record<string, unknown>
         } catch {
           return
         }
