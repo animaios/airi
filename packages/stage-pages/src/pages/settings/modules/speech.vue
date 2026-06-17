@@ -131,9 +131,9 @@ async function generateTestSpeech() {
 
   if (useSSML.value && !ssmlText.value.trim()) return
 
-  const provider = (await providersStore.getProviderInstance(
-    activeSpeechProvider.value,
-  )) as SpeechProviderWithExtraOptions<string, Record<string, unknown>>
+  const provider = await providersStore.getProviderInstance<
+    SpeechProviderWithExtraOptions<string, Record<string, unknown>>
+  >(activeSpeechProvider.value)
   if (!provider) {
     return
   }

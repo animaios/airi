@@ -207,7 +207,7 @@ const tabs = computed<Tab[]>(() => {
   return availableTabs
 })
 
-async function handleSetAsBackground(entry: BackgroundEntry) {
+function handleSetAsBackground(entry: BackgroundEntry) {
   activeBackgroundId.value = entry.id
 }
 

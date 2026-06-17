@@ -34,7 +34,14 @@ const regionOptions = [
 
 const hearingStore = useHearingStore()
 const providersStore = useProvidersStore()
-const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, Record<string, any>>> }
+
+interface AliyunNlsConfig {
+  accessKeyId?: string
+  accessKeySecret?: string
+  appKey?: string
+  region?: string
+}
+const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, AliyunNlsConfig>> }
 
 providersStore.initializeProvider(providerId)
 
