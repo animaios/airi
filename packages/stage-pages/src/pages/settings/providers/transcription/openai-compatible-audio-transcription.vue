@@ -24,7 +24,7 @@ const providerId = 'openai-compatible-audio-transcription'
 const hearingStore = useHearingStore()
 const providersStore = useProvidersStore()
 // deepsource:issue=JS-0323
-const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, any>> }
+const { providers } = storeToRefs(providersStore) as { providers: RemovableRef<Record<string, Record<string, any>>> }
 
 // Define computed properties for credentials
 const apiKey = computed({
