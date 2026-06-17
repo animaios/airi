@@ -210,9 +210,9 @@ function extractReleaseTagsFromAtom(atom: string) {
 }
 
 export interface AppUpdaterLike {
-  on: (event: string, listener: (...args: unknown[]) => void) => AppUpdaterLike
-  checkForUpdates: () => Promise<void>
-  downloadUpdate: () => Promise<void>
+  on: (event: string, listener: (...args: any[]) => void) => any
+  checkForUpdates: () => Promise<any>
+  downloadUpdate: () => Promise<any>
   quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => Promise<void> | void
   setFeedURL?: (options: { provider: 'generic'; url: string }) => void
   logger?: {

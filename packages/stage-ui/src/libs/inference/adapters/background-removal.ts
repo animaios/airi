@@ -7,7 +7,7 @@
  */
 
 import type { AllocationToken } from '../gpu-resource-coordinator'
-import type { ModelReadyResponse, ProgressPayload, WorkerOutboundMessage } from '../protocol'
+import type { InferenceResultResponse, ModelReadyResponse, ProgressPayload, WorkerOutboundMessage } from '../protocol'
 import type { BackgroundRemovalOutput } from '../../../workers/background-removal/worker'
 
 import { defaultPerfTracer } from '@proj-airi/stage-shared'
@@ -234,7 +234,7 @@ export function createBackgroundRemovalAdapter(): BackgroundRemovalAdapter {
           state = 'processing'
           const requestId = createRequestId()
 
-          const resultPromise = waitForMessage<BackgroundRemovalOutput>(
+          const resultPromise = waitForMessage<InferenceResultResponse<BackgroundRemovalOutput>>(
             worker,
             requestId,
             'inference-result',
@@ -258,7 +258,7 @@ export function createBackgroundRemovalAdapter(): BackgroundRemovalAdapter {
             [pixelsCopy.buffer],
           )
 
-          let result: BackgroundRemovalOutput | null = null
+          let result: InferenceResultResponse<BackgroundRemovalOutput> | null = null
           try {
             result = await resultPromise
           } catch (error) {
@@ -266,9 +266,14 @@ export function createBackgroundRemovalAdapter(): BackgroundRemovalAdapter {
             throw error
           }
 
+          if (!result?.output) {
+            state = 'ready'
+            throw new Error('Background removal failed to produce a result')
+          }
+
           // Apply mask to original image alpha channel
           const output = new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height)
-          const maskData = result.maskData
+          const maskData = result.output.maskData
           for (let i = 0; i < maskData.length; i++) {
             output.data[4 * i + 3] = maskData[i]
           }

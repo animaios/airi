@@ -12,8 +12,10 @@ import RemarkRehype from 'remark-rehype'
 import { defaultPerfTracer } from '@proj-airi/stage-shared'
 import { unified } from 'unified'
 
-/** File type used by unified ecosystem — derived from rehype-katex's transform return type */
-type VFile = ReturnType<typeof rehypeKatex> extends (tree: Root, file: infer F) => undefined ? F : never
+/** Minimal VFile interface for unified ecosystem — only properties used by this composable */
+interface VFile {
+  value?: string | Uint8Array
+}
 
 /** Rehype transform function type produced by rehype plugins such as rehype-katex */
 type RehypeTransform = (tree: Root, file: VFile) => undefined
@@ -47,7 +49,7 @@ function measuredKatex(options?: Parameters<typeof rehypeKatex>[0]): RehypeTrans
     const start = performance.now()
     const length = typeof file.value === 'string' ? file.value.length : undefined
     try {
-      return transform(tree, file)
+      return transform(tree, file as Parameters<typeof transform>[1])
     } finally {
       defaultPerfTracer.emit({
         tracerId: 'markdown',

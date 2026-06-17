@@ -24,8 +24,8 @@ const isLastStep = computed(() => value.value === props.steps.length - 1)
 
 function getKey(step: T, index: number): string | number {
   const key = props.stepKey
-  if (typeof key === 'string' && key in step) {
-    const val = (step as unknown as Record<string, unknown>)[key]
+  if (key != null && key in step) {
+    const val = (step as unknown as Record<string | number | symbol, unknown>)[key]
     if (typeof val === 'string' || typeof val === 'number') {
       return val
     }

@@ -16,7 +16,7 @@ type AnthropicConfig = z.input<typeof anthropicConfigSchema>
 
 function createAnthropic(apiKey: string, baseURL: string = 'https://api.anthropic.com/v1/') {
   const anthropicFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const resolvedInit = init ?? {}
+    const resolvedInit = { ...init }
     const headers = new Headers(resolvedInit.headers)
     headers.set('anthropic-dangerous-direct-browser-access', 'true')
     resolvedInit.headers = headers
