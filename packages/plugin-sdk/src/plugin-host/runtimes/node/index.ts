@@ -1,5 +1,3 @@
-import type { EventContext } from '@moeru/eventa'
-
 import type { PluginTransport } from '../../transports'
 
 import { createContext } from '@moeru/eventa'
@@ -21,7 +19,7 @@ export * from './loaders'
  * Returns:
  * - A node-compatible Eventa context, or throws if the transport is not implemented
  */
-export function createPluginContext(transport: PluginTransport): EventContext<any, any> {
+export function createPluginContext(transport: PluginTransport) {
   switch (transport.kind) {
     case 'in-memory':
       return createContext()
