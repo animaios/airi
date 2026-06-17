@@ -460,7 +460,7 @@ export const useSpeechStore = defineStore('speech', () => {
         ...(providerConfig.extraBody as Record<string, unknown> | undefined),
         airi_analytics: analytics,
       },
-    }
+    } as T
   }
 
   function generateSSML(text: string, voice: VoiceInfo, providerConfig?: Record<string, unknown>): string {
