@@ -212,7 +212,7 @@ function extractReleaseTagsFromAtom(atom: string) {
 // NOTICE: AppUpdaterLike maintains compatibility with MockAutoUpdater,
 // electron-updater's AutoUpdater, and EventEmitter-based implementations.
 export interface AppUpdaterLike {
-  on: (event: string, listener: (...args: unknown[]) => void) => unknown
+  on: (event: string, listener: (...args: unknown[]) => void) => AppUpdaterLike
   checkForUpdates: () => Promise<unknown>
   downloadUpdate: () => Promise<unknown>
   quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => Promise<void> | void
