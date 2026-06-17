@@ -1,5 +1,3 @@
-import type { EventContext } from '@moeru/eventa'
-
 import { createContext } from '@moeru/eventa'
 
 /**
@@ -46,7 +44,7 @@ export const channels = {
  * Returns:
  * - Nothing. Future reads from {@link channels}.host use the provided context.
  */
-export function setActiveHostChannel(context: EventContext<any, any>) {
+export function setActiveHostChannel(context: typeof channels.host) {
   channels.host = context
 }
 
@@ -62,6 +60,6 @@ export function setActiveHostChannel(context: EventContext<any, any>) {
  * Returns:
  * - Nothing. Future reads from {@link channels}.data use the provided context.
  */
-export function setActiveDataChannel(context: EventContext<any, any>) {
+export function setActiveDataChannel(context: typeof channels.data) {
   channels.data = context
 }
