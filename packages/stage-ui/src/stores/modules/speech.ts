@@ -426,12 +426,12 @@ export const useSpeechStore = defineStore('speech', () => {
    * @param providerConfig Additional provider configuration
    * @returns ArrayBuffer containing the audio data
    */
-  async function speech(
-    provider: SpeechProviderWithExtraOptions<string, Record<string, unknown>>,
+  async function speech<TConfig extends Record<string, unknown> = Record<string, unknown>>(
+    provider: SpeechProviderWithExtraOptions<string, TConfig>,
     model: string,
     input: string,
     voice: string,
-    providerConfig: Record<string, unknown> = {},
+    providerConfig: TConfig = {} as TConfig,
   ): Promise<ArrayBuffer> {
     const requestProviderConfig =
       activeSpeechProvider.value === OFFICIAL_SPEECH_PROVIDER_ID ||
@@ -442,7 +442,7 @@ export const useSpeechStore = defineStore('speech', () => {
           })
         : providerConfig
     const response = await generateSpeech({
-      ...provider.speech(model, requestProviderConfig),
+      ...provider.speech(model, requestProviderConfig as TConfig),
       input,
       voice,
     })

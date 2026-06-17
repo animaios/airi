@@ -117,6 +117,7 @@ export const useBackgroundStore = defineStore('background-entries', () => {
       await localforage.iterate<LegacyBackgroundEntry, void>((val, key) => {
         if (key.startsWith(legacyPrefix)) {
           legacyKeysToDelete.push(key)
+          if (!val) return
           const newId = key.replace(legacyPrefix, STORAGE_PREFIX)
 
           if (!loadedEntries.has(newId)) {
