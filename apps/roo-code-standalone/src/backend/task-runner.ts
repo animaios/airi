@@ -16,7 +16,7 @@
  * providers — anything else can route through OpenRouter.
  */
 
-import { getState, patchState } from './state.js'
+import { getState, patchState, upsertTask, getTask } from './state.js'
 import type { ExtensionState } from '@roo-code/types'
 
 /**
@@ -452,7 +452,7 @@ async function* streamOpenRouter(
  */
 async function* parseSSE(
   res: Response,
-  extract: (data: Record<string, unknown>) => StreamChunk | StreamChunk[] | null,
+  extract: (data: any) => StreamChunk | StreamChunk[] | null,
 ): AsyncGenerator<StreamChunk> {
   const reader = res.body?.getReader()
   if (!reader) throw new Error('No response body')
@@ -474,9 +474,9 @@ async function* parseSSE(
       const json = trimmed.slice(5).trim()
       if (json === '[DONE]') continue
 
-      let data: Record<string, unknown>
+      let data: any
       try {
-        data = JSON.parse(json) as Record<string, unknown>
+        data = JSON.parse(json) as any
       } catch {
         continue
       }
@@ -496,9 +496,9 @@ async function* parseSSE(
     if (trimmed.startsWith('data:')) {
       const json = trimmed.slice(5).trim()
       if (json && json !== '[DONE]') {
-        let data: Record<string, unknown>
+        let data: any
         try {
-          data = JSON.parse(json) as Record<string, unknown>
+          data = JSON.parse(json) as any
         } catch {
           return
         }
