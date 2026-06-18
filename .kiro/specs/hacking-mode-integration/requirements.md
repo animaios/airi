@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document defines requirements for integrating the AnimAIOS Code module (a standalone browser-based AI coding assistant) into the stage-tamagotchi Electron application to implement "Hacking Mode" functionality. The Code module is a fork of Roo Code that runs as a self-contained React SPA with a Fastify backend at localhost:3210. Hacking Mode enables AIRI to activate Code inside the AIRI interface via BrowserView, transforming the AIRI chatbox into the Code interface while AIRI narrates Code's summaries via TTS.
+This document defines requirements for integrating the AnimAIOS Code module (a standalone browser-based AI coding assistant) into the stage-tamagotchi Electron application to implement "Hacking Mode" functionality. The Code module is a fork of Roo Code that runs as a self-contained React SPA with a Fastify backend on a dynamically assigned port. Hacking Mode enables AIRI to activate Code inside the AIRI interface via WebContentsView, transforming the AIRI chatbox into the Code interface while AIRI narrates Code's summaries via TTS.
 
 The integration must preserve the Code module's independence (it remains a standalone product) while creating a seamless embedded experience where AIRI acts as the host and Code provides the coding intelligence on demand.
 
@@ -12,9 +12,11 @@ The integration must preserve the Code module's independence (it remains a stand
 - **Code_Module**: The standalone browser-based AI coding assistant (AnimAIOS Code fork of Roo Code) - operates as a dumb execution runtime with no AIRI knowledge
 - **Hacking_Session**: The canonical state object owned by Electron main process representing current integration state
 - **Hacking_Session_Service**: Single orchestrator owning lifecycle, mode, process, and activation rules
-- **Code_Process**: The child process running Code_Backend (Fastify server on port 3210)
+- **Code_Process**: The child process running Code_Backend (Fastify server on dynamically assigned port)
+- **Code_Backend**: The Fastify server process that must monitor parent Electron PID for orphan detection
 - **Code_Bridge_Service**: Manages WebSocket connection, config sync, and summary stream from Code to AIRI
-- **UI_Adapter_Layer**: Manages BrowserView rendering, resizing, and visibility only (no authority)
+- **UI_Adapter_Layer**: Manages WebContentsView rendering, resizing, and visibility only (no authority)
+- **WebContentsView**: Electron 30+ replacement for deprecated BrowserView API (similar API, see Electron migration docs)
 - **Main_Window**: The primary stage-tamagotchi Electron window
 - **Input_Gateway**: Normalized message bus that routes user input to AIRI or Code consumers
 - **Session_ID**: Shared identifier correlating AIRI and Code_Module activity across reconnects
@@ -30,15 +32,16 @@ The integration must preserve the Code module's independence (it remains a stand
 #### Acceptance Criteria
 
 1. THE Hacking_Session_Service SHALL be registered in the injeca container in `src/main/index.ts` with dependencies { lifecycle, mainWindow, serverChannel }
-2. THE Hacking_Session_Service SHALL maintain a canonical Hacking_Session state object with fields: { sessionId, state, processInfo, healthStatus, lastError }
-3. THE state field SHALL use finite state machine with exactly four values: "inactive", "starting", "active", "failed"
-4. WHEN Hacking_Session_Service starts, THE state SHALL initialize to "inactive"
-5. WHEN activation is requested, THE Hacking_Session_Service SHALL transition through: "starting" → "active" (on success) or "starting" → "failed" (on error)
-6. THE Hacking_Session_Service SHALL expose public methods: activate(config), deactivate(), getState(), getSessionId()
-7. THE Hacking_Session_Service SHALL own Code_Process lifecycle, Code_Bridge_Service instantiation, and UI_Adapter_Layer coordination
-8. WHEN state changes, THE Hacking_Session_Service SHALL emit a single Eventa broadcast event `electronHackingSessionStateChanged` with full state payload
-9. ALL other components SHALL subscribe to Hacking_Session state via Eventa events only
-10. THE Hacking_Session_Service SHALL generate a unique sessionId (UUID v4) on each activation and include it in all Code_Backend communication
+2. THE Hacking_Session_Service SHALL maintain a canonical Hacking_Session state object with fields: { sessionId, state, processInfo: { pid, port }, healthStatus, lastError }
+3. THE processInfo.port field SHALL store the dynamically assigned port number for Code_Backend
+4. THE state field SHALL use finite state machine with exactly four values: "inactive", "starting", "active", "failed"
+5. WHEN Hacking_Session_Service starts, THE state SHALL initialize to "inactive"
+6. WHEN activation is requested, THE Hacking_Session_Service SHALL transition through: "starting" → "active" (on success) or "starting" → "failed" (on error)
+7. THE Hacking_Session_Service SHALL expose public methods: activate(config), deactivate(), getState(), getSessionId()
+8. THE Hacking_Session_Service SHALL own Code_Process lifecycle, Code_Bridge_Service instantiation, and UI_Adapter_Layer coordination
+9. WHEN state changes, THE Hacking_Session_Service SHALL emit a single Eventa broadcast event `electronHackingSessionStateChanged` with full state payload
+10. ALL other components SHALL subscribe to Hacking_Session state via Eventa events only
+11. THE Hacking_Session_Service SHALL generate a unique sessionId (UUID v4) on each activation and include it in all Code_Backend communication
 
 ### Requirement 2: Code Process Lifecycle with Three-Tier Readiness
 
@@ -46,19 +49,21 @@ The integration must preserve the Code module's independence (it remains a stand
 
 #### Acceptance Criteria
 
-1. WHEN Hacking_Session_Service.activate() is called, THE Service SHALL spawn Code_Process running Code_Backend on localhost:3210 with executable path `modules/code/apps/roo-code-standalone/dist/server.js`
-2. IF port 3210 is already in use, THEN THE Service SHALL log error, transition state to "failed", and set lastError to "Port conflict: 3210 already bound"
-3. WHEN Code_Process starts, THE Service SHALL wait for three-tier readiness: process_started → http_ready → bridge_ready
-4. THE process_started state SHALL be reached when Code_Process PID is available
-5. THE http_ready state SHALL be reached when GET http://localhost:3210/health returns HTTP 200 within 10000ms
-6. THE bridge_ready state SHALL be reached when WebSocket connection to ws://localhost:3210/bridge completes handshake with sessionId
-7. IF bridge_ready is not reached within 15000ms total, THEN THE Service SHALL transition to "failed" state and kill Code_Process
-8. WHEN the Electron app quits, THE Hacking_Session_Service SHALL send SIGTERM to Code_Process and wait up to 3000ms for graceful shutdown
-9. IF Code_Process does not exit within timeout, THEN THE Service SHALL send SIGKILL to force termination
-10. WHEN Code_Process crashes or exits unexpectedly while state is "active", THE Service SHALL immediately invalidate current sessionId and execute full teardown
-11. THE full teardown sequence SHALL execute in order: (1) stop Input_Gateway routing, (2) close WebSocket, (3) destroy BrowserView, (4) set sessionId to null, (5) transition to "failed"
-12. IF Code_Process restarts mid-session (detected by PID change), THEN THE Service SHALL treat it as a crash and execute full teardown (session is NOT preserved)
-13. THE Hacking_Session_Service SHALL log PID, port, startup duration, and all three readiness transitions using `@guiiai/logg` namespace "hacking-session"
+1. WHEN Hacking_Session_Service.activate() is called, THE Service SHALL find an available port using dynamic port binding (e.g., get-port or net module)
+2. THE Service SHALL spawn Code_Process running Code_Backend with executable path `modules/code/apps/roo-code-standalone/dist/server.js` and pass the dynamic port via environment variable `PORT`
+3. THE Code_Backend SHALL monitor parent Electron process PID using `process.ppid()` with polling interval of 5000ms
+4. IF parent PID changes from initial value OR becomes 1 (init/orphaned), THEN THE Code_Backend SHALL immediately terminate with `process.exit(1)` to prevent zombie processes
+5. WHEN Code_Process starts, THE Service SHALL wait for three-tier readiness: process_started → http_ready → bridge_ready
+6. THE process_started state SHALL be reached when Code_Process PID is available
+7. THE http_ready state SHALL be reached when GET http://localhost:{port}/health returns HTTP 200 within 10000ms (where {port} is the dynamically assigned port)
+8. THE bridge_ready state SHALL be reached when WebSocket connection to ws://localhost:{port}/bridge completes handshake with sessionId
+9. IF bridge_ready is not reached within 15000ms total, THEN THE Service SHALL transition to "failed" state and kill Code_Process
+10. WHEN the Electron app quits, THE Hacking_Session_Service SHALL send SIGTERM to Code_Process and wait up to 3000ms for graceful shutdown
+11. IF Code_Process does not exit within timeout, THEN THE Service SHALL send SIGKILL to force termination
+12. WHEN Code_Process crashes or exits unexpectedly while state is "active", THE Service SHALL immediately invalidate current sessionId and execute full teardown
+13. THE full teardown sequence SHALL execute in order: (1) stop Input_Gateway routing, (2) close WebSocket, (3) destroy WebContentsView, (4) set sessionId to null, (5) transition to "failed"
+14. IF Code_Process restarts mid-session (detected by PID change), THEN THE Service SHALL treat it as a crash and execute full teardown (session is NOT preserved)
+15. THE Hacking_Session_Service SHALL log PID, port, startup duration, and all three readiness transitions using `@guiiai/logg` namespace "hacking-session"
 
 ### Requirement 3: Code Bridge Service for WebSocket and Config Sync
 
@@ -67,41 +72,46 @@ The integration must preserve the Code module's independence (it remains a stand
 #### Acceptance Criteria
 
 1. THE Code_Bridge_Service SHALL be instantiated by Hacking_Session_Service when state transitions to "starting"
-2. THE Code_Bridge_Service SHALL establish WebSocket connection to ws://localhost:3210/bridge with sessionId in handshake payload
+2. THE Code_Bridge_Service SHALL establish WebSocket connection to ws://localhost:{port}/bridge with sessionId in handshake payload (where {port} is the dynamically assigned port)
 3. WHEN WebSocket connection opens, THE Code_Bridge_Service SHALL send authentication message: `{ type: "auth", sessionId, token: <shared-secret> }`
 4. IF authentication fails (Code_Backend responds with close code 4001), THEN THE Code_Bridge_Service SHALL emit error and not attempt reconnection
 5. WHEN Code_Backend emits a "summary" message, THE Code_Bridge_Service SHALL validate payload contains { sessionId, text, metadata: { mode, model, tokens } }
 6. IF summary sessionId does not match current Hacking_Session sessionId, THEN THE Code_Bridge_Service SHALL log warning "Received summary from stale session" and discard message
 7. WHEN a valid summary is received (sessionId matches), THE Code_Bridge_Service SHALL emit Eventa broadcast `electronCodeSummaryReceived` with payload { sessionId, text, metadata }
 8. THE Code_Bridge_Service SHALL ignore all other summary sources (BrowserView events, HTTP polling) to prevent duplication
-9. WHEN Hacking_Session_Service.activate() is called with config parameter, THE Code_Bridge_Service SHALL POST config to http://localhost:3210/config with sessionId header
+9. WHEN Hacking_Session_Service.activate() is called with config parameter, THE Code_Bridge_Service SHALL POST config to http://localhost:{port}/config with sessionId header
 10. IF config sync fails, THEN THE Code_Bridge_Service SHALL log error but allow activation to proceed (Code uses stored settings)
 11. WHEN WebSocket connection closes unexpectedly AND state is "active", THE Code_Bridge_Service SHALL attempt reconnection with exponential backoff (base: 1000ms, max: 30000ms)
 12. IF reconnection succeeds, THE Code_Bridge_Service SHALL send handshake with CURRENT sessionId (must match or trigger full resync)
 13. IF 5 consecutive reconnection attempts fail, THE Code_Bridge_Service SHALL notify Hacking_Session_Service to transition to "failed" and execute teardown
 14. WHEN Hacking_Session_Service.deactivate() is called OR state transitions to "failed", THE Code_Bridge_Service SHALL close WebSocket connection and stop all reconnection attempts
 15. THE Code_Bridge_Service SHALL implement keepalive pings every 30000ms to detect stale connections
+16. WHEN teardown begins, THE Code_Bridge_Service SHALL set isTearingDown flag to true immediately
+17. WHILE isTearingDown is true, THE Code_Bridge_Service SHALL drop all incoming WebSocket messages without processing
+18. THE isTearingDown flag prevents race condition where messages arrive during the teardown window
 
-### Requirement 4: UI Adapter Layer for BrowserView Management
+### Requirement 4: UI Adapter Layer for WebContentsView Management
 
-**User Story:** As a developer, I want BrowserView to be a dumb rendering surface with no authority, so that all state is controlled by Electron and we avoid dual control planes.
+**User Story:** As a developer, I want WebContentsView to be a dumb rendering surface with no authority, so that all state is controlled by Electron and we avoid dual control planes.
 
 #### Acceptance Criteria
 
 1. THE UI_Adapter_Layer SHALL be a private implementation detail within Hacking_Session_Service
-2. WHEN Hacking_Session state transitions to "active", THE UI_Adapter_Layer SHALL create a BrowserView instance loading http://localhost:3210
-3. THE BrowserView SHALL be created with security settings: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, allowRunningInsecureContent: false }
-4. THE BrowserView SHALL use session partition "persist:hacking-mode" for isolation
-5. THE BrowserView SHALL load content ONLY from http://localhost:3210 origin and reject all other origins
-6. THE UI_Adapter_Layer SHALL attach BrowserView to Main_Window with bounds matching chat content area (minimum: 320x240px)
-7. WHILE state is "active", THE UI_Adapter_Layer SHALL update BrowserView bounds whenever Main_Window resizes, recalculating within 16ms (60fps frame budget)
-8. IF BrowserView fails to load within 10000ms, THEN THE UI_Adapter_Layer SHALL retry once after 2000ms
-9. IF retry fails, THEN THE Hacking_Session_Service SHALL transition to "failed" state with lastError indicating load timeout
-10. WHEN state transitions from "active" to ANY other state (inactive, failed), THE UI_Adapter_Layer SHALL immediately blank BrowserView content (load about:blank) BEFORE destroying instance
-11. THE blanking step (about:blank) SHALL complete BEFORE WebSocket close to prevent ghost UI execution
-12. THE destruction sequence SHALL execute in strict order: (1) blank BrowserView, (2) detach from Main_Window, (3) destroy BrowserView instance
-13. THE UI_Adapter_Layer SHALL NOT expose any Electron APIs to Code_Module via preload scripts
-14. THE UI_Adapter_Layer SHALL log BrowserView ID, bounds, and lifecycle events using namespace "hacking-session:ui"
+2. WHEN Hacking_Session state transitions to "active", THE UI_Adapter_Layer SHALL create a WebContentsView instance loading http://localhost:{port} (where {port} is the dynamically assigned port)
+3. THE UI_Adapter_Layer SHALL use WebContentsView API (Electron 30+) instead of deprecated BrowserView API
+4. THE migration path from BrowserView → WebContentsView follows similar API patterns (see Electron migration documentation)
+5. THE WebContentsView SHALL be created with security settings: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, allowRunningInsecureContent: false }
+6. THE WebContentsView SHALL use session partition "persist:hacking-mode" for isolation
+7. THE WebContentsView SHALL load content ONLY from http://localhost:{port} origin and reject all other origins
+8. THE UI_Adapter_Layer SHALL attach WebContentsView to Main_Window with bounds matching chat content area (minimum: 320x240px)
+9. WHILE state is "active", THE UI_Adapter_Layer SHALL update WebContentsView bounds whenever Main_Window resizes, recalculating within 16ms (60fps frame budget)
+10. IF WebContentsView fails to load within 10000ms, THEN THE UI_Adapter_Layer SHALL retry once after 2000ms
+11. IF retry fails, THEN THE Hacking_Session_Service SHALL transition to "failed" state with lastError indicating load timeout
+12. WHEN state transitions from "active" to ANY other state (inactive, failed), THE UI_Adapter_Layer SHALL immediately blank WebContentsView content (load about:blank) BEFORE destroying instance
+13. THE blanking step (about:blank) SHALL complete BEFORE WebSocket close to prevent ghost UI execution
+14. THE destruction sequence SHALL execute in strict order: (1) blank WebContentsView, (2) detach from Main_Window, (3) destroy WebContentsView instance
+15. THE UI_Adapter_Layer SHALL NOT expose any Electron APIs to Code_Module via preload scripts
+16. THE UI_Adapter_Layer SHALL log WebContentsView ID, bounds, and lifecycle events using namespace "hacking-session:ui"
 
 ### Requirement 5: Input Gateway for Normalized Message Routing
 
@@ -115,10 +125,11 @@ The integration must preserve the Code module's independence (it remains a stand
 4. WHEN Hacking_Session state is "active", THE Input_Gateway SHALL route messages to Code_Consumer only
 5. THE Input_Gateway SHALL ensure exactly one consumer receives each message (no duplication)
 6. THE AIRI_Consumer SHALL forward messages to AIRI's existing chat processing pipeline
-7. THE Code_Consumer SHALL send messages to Code_Backend via WebSocket (NOT via DOM injection into BrowserView)
+7. THE Code_Consumer SHALL send messages to Code_Backend via WebSocket (NOT via DOM injection into WebContentsView)
 8. THE Input_Gateway SHALL enforce maximum message size of 10000 characters
-9. IF message exceeds size limit, THEN THE Input_Gateway SHALL truncate and log warning
-10. THE Input_Gateway SHALL maintain separate in-memory message histories (max 1000 messages each) for AIRI and Code consumers
+9. IF message exceeds size limit, THEN THE Input_Gateway SHALL reject the message with error notification to the user
+10. THE rejection approach is safer than truncation which can cause syntax errors in code snippets
+11. THE Input_Gateway SHALL maintain separate in-memory message histories (max 1000 messages each) for AIRI and Code consumers
 11. WHEN Hacking_Session state changes, THE Input_Gateway SHALL switch active consumer without replaying history
 12. THE Input_Gateway SHALL preserve pending input text in a buffer when state transitions occur
 
@@ -131,11 +142,15 @@ The integration must preserve the Code module's independence (it remains a stand
 1. THE TTS_Narrator SHALL subscribe to Eventa broadcast event `electronCodeSummaryReceived` ONLY (ignoring all other summary sources)
 2. WHEN `electronCodeSummaryReceived` event is received with payload { sessionId, text, metadata }, THE TTS_Narrator SHALL validate sessionId matches current Hacking_Session sessionId
 3. IF sessionId mismatch occurs, THEN THE TTS_Narrator SHALL ignore the event and log warning "Summary from stale session"
-4. WHEN sessionId validates, THE TTS_Narrator SHALL send summary text to AIRI's existing TTS pipeline
-5. THE TTS_Narrator SHALL use AIRI's configured voice settings for narration (voice model, speed, pitch)
-6. IF TTS generation fails, THEN THE TTS_Narrator SHALL log error with namespace "hacking-session:tts" but continue without blocking Code_Module
-7. THE TTS_Narrator SHALL implement throttling: max 1 narration per 2000ms to prevent audio overlap
-8. IF summaries arrive faster than throttle limit, THEN THE TTS_Narrator SHALL queue them and process in order
+4. WHEN sessionId validates, THE TTS_Narrator SHALL queue summary text for TTS processing
+5. WHEN playing queued audio, THE TTS_Narrator SHALL re-validate sessionId at playback time (before sending to TTS pipeline)
+6. IF sessionId mismatches at playback time, THEN THE TTS_Narrator SHALL discard the queued audio and log warning "Discarded stale audio after session transition"
+7. THE re-validation at playback prevents stale audio from playing after session transitions
+8. THE TTS_Narrator SHALL send validated summary text to AIRI's existing TTS pipeline
+9. THE TTS_Narrator SHALL use AIRI's configured voice settings for narration (voice model, speed, pitch)
+10. IF TTS generation fails, THEN THE TTS_Narrator SHALL log error with namespace "hacking-session:tts" but continue without blocking Code_Module
+11. THE TTS_Narrator SHALL implement throttling: max 1 narration per 2000ms to prevent audio overlap
+12. IF summaries arrive faster than throttle limit, THEN THE TTS_Narrator SHALL queue them and process in order
 
 ### Requirement 7: Eventa IPC Contracts (Minimal Set)
 
@@ -183,7 +198,8 @@ The integration must preserve the Code module's independence (it remains a stand
 6. WHEN toggle is clicked and state is "inactive", THE Settings_Page SHALL invoke `electronHackingSessionActivate` with { codeMode: <selected-mode>, providerConfig: <airi-config> } and show loading spinner
 7. WHEN toggle is clicked and state is "active", THE Settings_Page SHALL invoke `electronHackingSessionDeactivate` and show loading spinner
 8. THE Settings_Page SHALL disable the toggle button while state is "starting" (prevent duplicate activation)
-9. THE Settings_Page SHALL include a dropdown for selecting Code mode with options: "Spec", "Vibe", "Boss", "Ask", "Debug" (default: "Vibe")
+9. THE Settings_Page toggle button debounce mechanism SHALL be identical to the keyboard shortcut debounce (both check "starting" state)
+10. THE Settings_Page SHALL include a dropdown for selecting Code mode with options: "Spec", "Vibe", "Boss", "Ask", "Debug" (default: "Vibe")
 10. WHEN mode selection changes, THE Settings_Page SHALL persist choice to app config and only apply on next activation
 11. THE Settings_Page SHALL include keyboard shortcut display: "Ctrl+Shift+H (Cmd+Shift+H on macOS)" with explanatory text
 
@@ -201,7 +217,7 @@ The integration must preserve the Code module's independence (it remains a stand
 3. WHEN Code_Process crashes while state is "active", THE Hacking_Session_Service SHALL automatically transition to "failed" and deactivate
 4. THE Hacking_Session_Service SHALL log all errors to main process console using `@guiiai/logg` with namespace "hacking-session" and level "error"
 5. ERROR logs SHALL include: timestamp, sessionId, state before error, error message, stack trace, processInfo (PID, port)
-6. WHEN BrowserView load fails after retry, THE lastError SHALL be set to "BrowserView failed to load after 2 attempts"
+6. WHEN WebContentsView load fails after retry, THE lastError SHALL be set to "WebContentsView failed to load after 2 attempts"
 7. THE Settings_Page SHALL display a "Retry" button when state is "failed"
 8. WHEN "Retry" button is clicked, THE Settings_Page SHALL invoke `electronHackingSessionActivate` with SAME config parameters (implicit retry)
 9. THE retry operation SHALL always generate a NEW sessionId (never reuse failed sessionId)
@@ -217,9 +233,10 @@ The integration must preserve the Code module's independence (it remains a stand
 2. WHEN shortcut is pressed and Hacking_Session state is "inactive", THE Shortcut_Controller SHALL invoke `electronHackingSessionActivate`
 3. WHEN shortcut is pressed and Hacking_Session state is "active", THE Shortcut_Controller SHALL invoke `electronHackingSessionDeactivate`
 4. WHEN shortcut is pressed and state is "starting", THE Shortcut_Controller SHALL do nothing (debounce to prevent double activation)
-5. WHEN shortcut is pressed and state is "failed", THE Shortcut_Controller SHALL attempt activation (implicit retry)
-6. THE shortcut SHALL be configurable via settings UI (stored in app config as "hackingModeShortcut")
-7. THE Shortcut_Controller SHALL display notification when shortcut is triggered: "Activating Hacking Mode..." or "Deactivating Hacking Mode..."
+5. THE keyboard shortcut debounce mechanism SHALL be identical to the Settings toggle button debounce (both check "starting" state)
+6. WHEN shortcut is pressed and state is "failed", THE Shortcut_Controller SHALL attempt activation (implicit retry)
+7. THE shortcut SHALL be configurable via settings UI (stored in app config as "hackingModeShortcut")
+8. THE Shortcut_Controller SHALL display notification when shortcut is triggered: "Activating Hacking Mode..." or "Deactivating Hacking Mode..."
 
 ### Requirement 12: Renderer Integration and State Subscription
 
@@ -228,8 +245,8 @@ The integration must preserve the Code module's independence (it remains a stand
 #### Acceptance Criteria
 
 1. THE Chat_Component (renderer) SHALL subscribe to `electronHackingSessionStateChanged` broadcast event
-2. WHEN state is "inactive" or "failed", THE Chat_Component SHALL display AIRI chatbox and hide Code BrowserView overlay
-3. WHEN state is "active", THE Chat_Component SHALL hide AIRI chatbox and show Code BrowserView overlay
+2. WHEN state is "inactive" or "failed", THE Chat_Component SHALL display AIRI chatbox and hide Code WebContentsView overlay
+3. WHEN state is "active", THE Chat_Component SHALL hide AIRI chatbox and show Code WebContentsView overlay
 4. WHEN state is "starting", THE Chat_Component SHALL display loading indicator: "Activating Hacking Mode..."
 5. THE Chat_Component SHALL use CSS transitions (duration: 300ms) for smooth visibility changes
 6. THE Chat_Component SHALL ensure only ONE interface is visible at a time (no overlap)
@@ -257,7 +274,7 @@ The integration must preserve the Code module's independence (it remains a stand
 
 #### Acceptance Criteria
 
-1. THE Code_Backend SHALL implement a WebSocket endpoint at ws://localhost:3210/bridge
+1. THE Code_Backend SHALL implement a WebSocket endpoint at ws://localhost:{port}/bridge (where {port} is the dynamically assigned port)
 2. WHEN a WebSocket client connects to /bridge, THE Code_Backend SHALL expect handshake message: `{ type: "auth", sessionId: string, token: string }`
 3. THE Code_Backend SHALL validate token against shared secret (environment variable CODE_BRIDGE_TOKEN or default: "animaios-hacking-bridge")
 4. IF authentication fails (invalid token), THEN THE Code_Backend SHALL close WebSocket with code 4001 and reason "Authentication failed"
@@ -329,7 +346,7 @@ The integration must preserve the Code module's independence (it remains a stand
 4. WHEN Code_Process starts, THE Service SHALL log: { level: "info", message: "Process started", pid, port, startupDuration: <ms> }
 5. WHEN errors occur, THE Service SHALL log: { level: "error", message: <error>, stack: <trace>, context: { sessionId, state, processInfo } }
 6. THE Code_Bridge_Service SHALL log WebSocket state changes: { level: "debug", message: "WebSocket <event>", sessionId, event: "connected" | "disconnected" | "error" }
-7. THE UI_Adapter_Layer SHALL log BrowserView lifecycle: { level: "debug", message: "BrowserView <event>", id: <view-id>, bounds: { x, y, width, height } }
+7. THE UI_Adapter_Layer SHALL log WebContentsView lifecycle: { level: "debug", message: "WebContentsView <event>", id: <view-id>, bounds: { x, y, width, height } }
 8. ALL log entries SHALL include timestamp (ISO 8601 format) and sessionId when available
 9. THE Hacking_Session_Service SHALL write logs to ~/.kiro/logs/hacking-session.log with daily rotation (max 7 days retention)
 10. IN debug mode (env var HACKING_SESSION_DEBUG=1), THE Service SHALL also log to console and include additional metadata
@@ -343,11 +360,11 @@ The integration must preserve the Code module's independence (it remains a stand
 1. WHEN state transitions from "active" to "failed" OR "inactive", THE Hacking_Session_Service SHALL execute teardown in strict order
 2. THE teardown order SHALL be:
    - Step 1: Stop Input_Gateway routing (prevent new messages)
-   - Step 2: Blank BrowserView content (load about:blank to halt JS execution)
+   - Step 2: Blank WebContentsView content (load about:blank to halt JS execution)
    - Step 3: Close WebSocket connection (send close frame, wait max 1000ms)
    - Step 4: Send SIGTERM to Code_Process (wait max 3000ms)
    - Step 5: If process still alive, send SIGKILL
-   - Step 6: Detach and destroy BrowserView instance
+   - Step 6: Detach and destroy WebContentsView instance
    - Step 7: Set sessionId to null
    - Step 8: Emit `electronHackingSessionStateChanged` with new state
 3. EACH step SHALL complete before proceeding to next step (no parallel teardown)
@@ -355,7 +372,7 @@ The integration must preserve the Code module's independence (it remains a stand
 5. THE teardown SHALL be idempotent (safe to call multiple times)
 6. WHEN teardown completes, THE Hacking_Session_Service SHALL guarantee:
    - No WebSocket messages can arrive
-   - No BrowserView UI is mounted
+   - No WebContentsView UI is mounted
    - No Code_Process is running
    - No sessionId is active
 7. THE Input_Gateway SHALL reject all messages during teardown (steps 1-8) and queue them for after state settles
