@@ -34,6 +34,7 @@ import { setupGodotStageManager } from './services/airi/godot-stage'
 import { setupBuiltInServer } from './services/airi/http-server'
 import { setupMcpStdioManager } from './services/airi/mcp-servers'
 import { setupPluginHost } from './services/airi/plugins'
+import { setupHackingSessionService } from './services/hackingSession/HackingSessionService'
 import { setupArtistryBridge } from './services/airi/widgets/artistry-bridge'
 import { setupAutoUpdater } from './services/electron/auto-updater'
 import { setupGlobalShortcutService } from './services/electron/global-shortcut'
@@ -162,6 +163,10 @@ app
       build: async () => setupGodotStageManager(),
     })
 
+    const hackingSessionService = injeca.provide('services:hacking-session', {
+      build: () => setupHackingSessionService(),
+    })
+
     const mcpStdioManager = injeca.provide('modules:mcp-stdio-manager', {
       build: async () => setupMcpStdioManager(),
     })
@@ -231,6 +236,7 @@ app
         autoUpdater,
         serverChannel,
         godotStageManager,
+        hackingSessionService,
         mcpStdioManager,
         i18n,
         onboardingWindowManager,
